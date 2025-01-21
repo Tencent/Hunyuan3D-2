@@ -30,7 +30,7 @@ from hy3dgen.text2image import HunyuanDiTPipeline
 
 
 def image_to_3d(image_path='assets/demo.png'):
-    model_path = 'Hunyuan3D-2'
+    model_path = 'tencent/Hunyuan3D-2'
     pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
 
     mesh = pipeline(image=image_path, num_inference_steps=30, mc_algo='mc',
@@ -53,7 +53,7 @@ def image_to_3d(image_path='assets/demo.png'):
 def text_to_3d(prompt='a car'):
     rembg = BackgroundRemover()
     t2i = HunyuanDiTPipeline('Tencent-Hunyuan--HunyuanDiT-v1.1-Diffusers-Distilled')
-    model_path = 'Hunyuan3D-2'
+    model_path = 'tencent/Hunyuan3D-2'
     i23d = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
 
     image = t2i(prompt)

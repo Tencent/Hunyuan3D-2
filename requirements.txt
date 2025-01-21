@@ -1,3 +1,6 @@
+gradio_litmodel3d
+ninja
+pybind11
 trimesh
 diffusers
 tqdm
@@ -27,3 +30,4 @@ rembg
 onnxruntime
 pygltflib
 sentencepiece
+gradio

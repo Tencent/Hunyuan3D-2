@@ -1,4 +1,3 @@
-gradio_litmodel3d
 ninja
 pybind11
 trimesh
@@ -15,7 +14,6 @@ ConfigArgParse
 xatlas
 scikit-learn
 scikit-image
-tritonclient
 gevent
 geventhttpclient
 facexlib
@@ -31,3 +29,5 @@ onnxruntime
 pygltflib
 sentencepiece
 gradio
+fastapi
+uvicorn

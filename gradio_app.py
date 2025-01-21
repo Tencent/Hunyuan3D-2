@@ -1,11 +1,14 @@
-# pip install gradio==3.39.0
 import os
 import shutil
 import time
 from glob import glob
+from pathlib import Path
 
 import gradio as gr
 import torch
+import uvicorn
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 
 def get_example_img_list():
@@ -68,7 +71,7 @@ def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
     with open(output_html_path, 'w') as f:
         f.write(template_html.replace('<model-viewer>', obj_html))
 
-    iframe_tag = f'<iframe src="file/{output_html_path}" height="{height}" width="100%" frameborder="0"></iframe>'
+    iframe_tag = f'<iframe src="/static/{output_html_path}" height="{height}" width="100%" frameborder="0"></iframe>'
     print(f'Find html {output_html_path}, {os.path.exists(output_html_path)}')
 
     return f"""
@@ -357,10 +360,6 @@ if __name__ == '__main__':
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
 
-    from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, \
-        Hunyuan3DDiTFlowMatchingPipeline
-    from hy3dgen.rembg import BackgroundRemover
-
     try:
         from hy3dgen.texgen import Hunyuan3DPaintPipeline
 
@@ -379,15 +378,24 @@ if __name__ == '__main__':
         t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
         HAS_T2I = True
 
+    from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, \
+        Hunyuan3DDiTFlowMatchingPipeline
+    from hy3dgen.rembg import BackgroundRemover
+
     rmbg_worker = BackgroundRemover()
     i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
     floater_remove_worker = FloaterRemover()
     degenerate_face_remove_worker = DegenerateFaceRemover()
     face_reduce_worker = FaceReducer()
 
+    # https://discuss.huggingface.co/t/how-to-serve-an-html-file/33921/2
+    # create a FastAPI app
+    app = FastAPI()
+    # create a static directory to store the static files
+    static_dir = Path('./gradio_cache')
+    static_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
     demo = build_app()
-    demo.queue().launch(
-        server_name='0.0.0.0',
-        server_port=args.port,
-        allowed_paths=[SAVE_DIR],
-    )
+    app = gr.mount_gradio_app(app, demo, path="/")
+    uvicorn.run(app, host="0.0.0.0", port=args.port)

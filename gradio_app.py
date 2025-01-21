@@ -234,7 +234,7 @@ def build_app():
                         with gr.Row():
                             check_box_rembg = gr.Checkbox(value=True, label='Remove Background')
 
-                    with gr.Tab('Text Prompt', id='tab_txt_prompt') as tab_tp:
+                    with gr.Tab('Text Prompt', id='tab_txt_prompt', visible=args.enable_t23d) as tab_tp:
                         caption = gr.Textbox(label='Text Prompt',
                                              placeholder='HunyuanDiT will be used to generate image.',
                                              info='Example: A 3D model of a cute cat, white background')
@@ -247,7 +247,7 @@ def build_app():
 
                 with gr.Group():
                     btn = gr.Button(value='Generate Shape Only', variant='primary')
-                    btn_all = gr.Button(value='Generate Shape and Texture', variant='primary')
+                    btn_all = gr.Button(value='Generate Shape and Texture', variant='primary', visible=HAS_TEXTUREGEN)
 
                 with gr.Group():
                     file_out = gr.File(label="File", visible=False)
@@ -267,10 +267,26 @@ def build_app():
                             gr.Examples(examples=example_is, inputs=[image],
                                         label="Image Prompts", examples_per_page=18)
 
-                    with gr.Tab('Text to 3D Gallery', id='tab_txt_gallery') as tab_gt:
+                    with gr.Tab('Text to 3D Gallery', id='tab_txt_gallery', visible=args.enable_t23d) as tab_gt:
                         with gr.Row():
                             gr.Examples(examples=example_ts, inputs=[caption],
                                         label="Text Prompts", examples_per_page=18)
+
+        if not HAS_TEXTUREGEN:
+            gr.HTML(""")
+            <div style="margin-top: 20px;">
+                <b>Warning: </b>
+                Texture synthesis is disable due to missing requirements,
+                 please install requirements following README.md to activate it.
+            </div>
+            """)
+        if not args.enable_t23d:
+            gr.HTML("""
+            <div style="margin-top: 20px;">
+                <b>Warning: </b>
+                Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.
+            </div>
+            """)
 
         tab_gi.select(fn=lambda: gr.update(selected='tab_img_prompt'), outputs=tabs_prompt)
         tab_gt.select(fn=lambda: gr.update(selected='tab_txt_prompt'), outputs=tabs_prompt)
@@ -318,6 +334,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--cache-path', type=str, default='./gradio_cache')
+    parser.add_argument('--enable-t23d', action='store_true')
     args = parser.parse_args()
 
     SAVE_DIR = args.cache_path
@@ -339,14 +356,26 @@ if __name__ == '__main__':
 
     from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, \
         Hunyuan3DDiTFlowMatchingPipeline
-    from hy3dgen.texgen import Hunyuan3DPaintPipeline
     from hy3dgen.rembg import BackgroundRemover
-    from hy3dgen.text2image import HunyuanDiTPipeline
+
+    try:
+        from hy3dgen.texgen import Hunyuan3DPaintPipeline
+
+        texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
+        HAS_TEXTUREGEN = True
+    except Exception as e:
+        print(e)
+        print("Failed to load texture generator.")
+        print('Please try to install requirements by following README.md')
+        HAS_TEXTUREGEN = False
+
+    if args.enable_t23d:
+        from hy3dgen.text2image import HunyuanDiTPipeline
+
+        t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
 
     rmbg_worker = BackgroundRemover()
-    t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
     i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
-    texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
     floater_remove_worker = FloaterRemover()
     degenerate_face_remove_worker = DegenerateFaceRemover()
     face_reduce_worker = FaceReducer()

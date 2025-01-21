@@ -26,7 +26,6 @@ import torch
 
 from hy3dgen.rembg import BackgroundRemover
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline, FaceReducer, FloaterRemover, DegenerateFaceRemover
-from hy3dgen.texgen import Hunyuan3DPaintPipeline
 from hy3dgen.text2image import HunyuanDiTPipeline
 
 
@@ -41,9 +40,14 @@ def image_to_3d(image_path='assets/demo.png'):
     mesh = FaceReducer()(mesh)
     mesh.export('mesh.glb')
 
-    pipeline = Hunyuan3DPaintPipeline.from_pretrained(model_path)
-    mesh = pipeline(mesh, image=image_path)
-    mesh.export('texture.glb')
+    try:
+        from hy3dgen.texgen import Hunyuan3DPaintPipeline
+        pipeline = Hunyuan3DPaintPipeline.from_pretrained(model_path)
+        mesh = pipeline(mesh, image=image_path)
+        mesh.export('texture.glb')
+    except Exception as e:
+        print(e)
+        print('Please try to install requirements by following README.md')
 
 
 def text_to_3d(prompt='a car'):

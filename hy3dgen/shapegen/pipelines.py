@@ -216,7 +216,7 @@ class Hunyuan3DDiTPipeline:
                     import huggingface_hub
                     # download from huggingface
                     path = huggingface_hub.snapshot_download(repo_id=original_model_path)
-                    model_path = os.path.join(path, 'hunyuan3D-dit-v2-0')
+                    model_path = os.path.join(path, 'hunyuan3d-dit-v2-0')
                 except ImportError:
                     logger.warning(
                         "You need to install HuggingFace Hub to load models from the hub."

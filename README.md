@@ -28,7 +28,8 @@
 
 ## 🔥 News
 
-- Jan 21, 2025: 💬 Release [Hunyuan3D 2.0](https://huggingface.co/spaces/tencent/Hunyuan3D-2). Please give it a try!
+- Jan 21, 2025: 💬 Release inference code and pretrained models of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
+- Jan 21, 2025: 💬 Release Hunyuan3D 2.0. Please give it a try via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) our [official site](https://3d.hunyuan.tencent.com)!
 
 ## **Abstract**
 
@@ -157,6 +158,7 @@ Don't forget to visit [Hunyuan3D](https://3d.hunyuan.tencent.com) for quick use,
 
 - [x] Inference Code
 - [x] Model Checkpoints
+- [ ] Technical Report
 - [ ] ComfyUI
 - [ ] TensorRT Version
 

@@ -127,6 +127,7 @@ python3 gradio_app.py
 
 - [x] 推理代码
 - [x] 模型权重
+- [ ] 技术报告
 - [ ] ComfyUI
 - [ ] TensorRT 量化
 

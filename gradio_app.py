@@ -198,7 +198,7 @@ def shape_generation(
 
 def build_app():
     title_html = """
-    <div style="font-size: 2em; font-weight: bold; text-align: center; margin-bottom: 20px">
+    <div style="font-size: 2em; font-weight: bold; text-align: center; margin-bottom: 5px">
     
     Hunyuan3D-2: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation
     </div>

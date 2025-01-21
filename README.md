@@ -1,6 +1,6 @@
 [中文阅读](README_zh_cn.md)
 
-<p align="center">
+<p align="center"> 
   <img src="./assets/images/teaser.jpg">
 
 

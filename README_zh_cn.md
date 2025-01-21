@@ -68,7 +68,7 @@
 
 ### 预训练模型
 
-| 模型名称                 | 发布日期       | Huggingface                                      |
+| 模型名称                 | 发布日期       | Huggingface                                     |
 |----------------------|------------|--------------------------------------------------| 
 | Hunyuan3D-DiT-v2-0   | 2025-01-21 | [下载](https://huggingface.co/tencent/Hunyuan3D-2) |
 | Hunyuan3D-Paint-v2-0 | 2025-01-21 | [下载](https://huggingface.co/tencent/Hunyuan3D-2) |

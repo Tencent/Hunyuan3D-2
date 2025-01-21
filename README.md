@@ -29,6 +29,7 @@
 
 ## 🔥 News
 
+- Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
 - Jan 21, 2025: 💬 Release inference code and pretrained models of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
 - Jan 21, 2025: 💬 Release Hunyuan3D 2.0. Please give it a try via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) our [official site](https://3d.hunyuan.tencent.com)!
 
@@ -172,6 +173,15 @@ If you found this repository helpful, please cite our report:
     title={Hunyuan3D 2.0: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation},
     author={Tencent Hunyuan3D Team},
     year={2025},
+}
+
+@misc{yang2024tencent,
+    title={Tencent Hunyuan3D-1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation},
+    year={2024},
+    author={Tencent Hunyuan3D Team},
+    eprint={2411.02293},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
 }
 ```
 

@@ -187,7 +187,7 @@ If you found this repository helpful, please cite our reports:
 ## Acknowledgements
 
 We would like to thank the contributors to
-the [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), and [Michelangelo](https://github.com/NeuralCarver/Michelangelo/tree/main) repositories, for their open research and exploration.
+the [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), [CraftsMan3D](https://github.com/wyysf-98/CraftsMan3D), and [Michelangelo](https://github.com/NeuralCarver/Michelangelo/tree/main) repositories, for their open research and exploration.
 
 ## Star History
 

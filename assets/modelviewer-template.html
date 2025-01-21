@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Import the component -->
+    <script src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js" type="module"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const modelViewers = document.querySelectorAll('model-viewer');
+
+            modelViewers.forEach(modelViewer => {
+                modelViewer.addEventListener('load', (event) => {
+                    const [material] = modelViewer.model.materials;
+                    let color = [43, 44, 46, 255];
+                    color = color.map(x => x / 255);
+                    material.pbrMetallicRoughness.setMetallicFactor(0.1); // 完全金属
+                    material.pbrMetallicRoughness.setRoughnessFactor(0.7); // 低粗糙度
+                    material.pbrMetallicRoughness.setBaseColorFactor(color);  // CornflowerBlue in RGB
+                });
+            });
+        });
+    </script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .centered-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            border-color: #e5e7eb;
+            border-style: solid;
+            border-width: 1px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="centered-container">
+    <model-viewer>
+</div>
+</body>
+
+</html>

@@ -93,10 +93,12 @@ def _gen_shape(
     time_meta = {}
     start_time_0 = time.time()
 
-    image_path = ''
     if image is None:
         start_time = time.time()
-        image = t2i_worker(caption)
+        try:
+            image = t2i_worker(caption)
+        except Exception as e:
+            raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
         time_meta['text2image'] = time.time() - start_time
 
     image.save(os.path.join(save_folder, 'input.png'))
@@ -199,16 +201,16 @@ def shape_generation(
 def build_app():
     title_html = """
     <div style="font-size: 2em; font-weight: bold; text-align: center; margin-bottom: 5px">
-    
+
     Hunyuan3D-2: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation
     </div>
     <div align="center">
     Tencent Hunyuan3D Team
     </div>
     <div align="center">
-      <a href="https://github.com/tencent/Hunyuan3D-1">Github Page</a> &ensp; 
+      <a href="https://github.com/tencent/Hunyuan3D-2">Github Page</a> &ensp; 
       <a href="http://3d-models.hunyuan.tencent.com">Homepage</a> &ensp;
-      <a href="https://arxiv.org/pdf/2411.02293">Technical Report</a> &ensp;
+      <a href="#">Technical Report</a> &ensp;
       <a href="https://huggingface.co/Tencent/Hunyuan3D-2"> Models</a> &ensp;
     </div>
     """
@@ -234,7 +236,7 @@ def build_app():
                         with gr.Row():
                             check_box_rembg = gr.Checkbox(value=True, label='Remove Background')
 
-                    with gr.Tab('Text Prompt', id='tab_txt_prompt', visible=args.enable_t23d) as tab_tp:
+                    with gr.Tab('Text Prompt', id='tab_txt_prompt', visible=HAS_T2I) as tab_tp:
                         caption = gr.Textbox(label='Text Prompt',
                                              placeholder='HunyuanDiT will be used to generate image.',
                                              info='Example: A 3D model of a cute cat, white background')
@@ -267,7 +269,7 @@ def build_app():
                             gr.Examples(examples=example_is, inputs=[image],
                                         label="Image Prompts", examples_per_page=18)
 
-                    with gr.Tab('Text to 3D Gallery', id='tab_txt_gallery', visible=args.enable_t23d) as tab_gt:
+                    with gr.Tab('Text to 3D Gallery', id='tab_txt_gallery', visible=HAS_T2I) as tab_gt:
                         with gr.Row():
                             gr.Examples(examples=example_ts, inputs=[caption],
                                         label="Text Prompts", examples_per_page=18)
@@ -284,12 +286,13 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.
+                Text to 3D is disable. To activate it, please run `python gradio_app.py --enable_t23d`.
             </div>
             """)
 
         tab_gi.select(fn=lambda: gr.update(selected='tab_img_prompt'), outputs=tabs_prompt)
-        tab_gt.select(fn=lambda: gr.update(selected='tab_txt_prompt'), outputs=tabs_prompt)
+        if HAS_T2I:
+            tab_gt.select(fn=lambda: gr.update(selected='tab_txt_prompt'), outputs=tabs_prompt)
 
         btn.click(
             shape_generation,
@@ -334,7 +337,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--cache-path', type=str, default='./gradio_cache')
-    parser.add_argument('--enable-t23d', action='store_true')
+    parser.add_argument('--enable_t23d', action='store_true')
     args = parser.parse_args()
 
     SAVE_DIR = args.cache_path
@@ -369,10 +372,12 @@ if __name__ == '__main__':
         print('Please try to install requirements by following README.md')
         HAS_TEXTUREGEN = False
 
+    HAS_T2I = False
     if args.enable_t23d:
         from hy3dgen.text2image import HunyuanDiTPipeline
 
         t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
+        HAS_T2I = True
 
     rmbg_worker = BackgroundRemover()
     i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')

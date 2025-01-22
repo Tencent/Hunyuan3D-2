@@ -100,7 +100,7 @@ std::vector<torch::Tensor> rasterize_image_cpu(torch::Tensor V, torch::Tensor F,
     auto INT64_options = torch::TensorOptions().dtype(torch::kInt64).requires_grad(false);
     auto findices = torch::zeros({height, width}, options);
     INT64 maxint = (INT64)MAXINT * (INT64)MAXINT + (MAXINT - 1);
-    auto z_min = torch::ones({height, width}, INT64_options) * (long)maxint;
+    auto z_min = torch::ones({height, width}, INT64_options) * (int64_t)maxint;
 
     if (!use_depth_prior) {
         for (int i = 0; i < num_faces; ++i) {

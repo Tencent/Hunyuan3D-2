@@ -26,7 +26,7 @@
 
 <br>
 
-> Join our **[Wechat](#find-us)** and **[Discord](#find-us)** group to discuss and find help from us.
+> Join our **[Wechat](#)** and **[Discord](https://discord.gg/GuaWYwzKbX)** group to discuss and find help from us.
 
 | Wechat Group                                     | Xiaohongshu                                           | X                                           | Discord                                           |
 |--------------------------------------------------|-------------------------------------------------------|---------------------------------------------|---------------------------------------------------|

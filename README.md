@@ -38,8 +38,6 @@
 “ Living out everyone’s imagination on creating and manipulating 3D assets.”
 </p>
 
-
-
 ## 🔥 News
 
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
@@ -105,10 +103,13 @@ Generation results of Hunyuan3D 2.0:
 
 ### Pretrained Models
 
-| Model                | Date       | Huggingface                                            |
-|----------------------|------------|--------------------------------------------------------| 
-| Hunyuan3D-DiT-v2-0   | 2025-01-21 | [Download](https://huggingface.co/tencent/Hunyuan3D-2) |
-| Hunyuan3D-Paint-v2-0 | 2025-01-21 | [Download](https://huggingface.co/tencent/Hunyuan3D-2) |
+| Model                  | Date       | Params | Huggingface                                                                             |
+|------------------------|------------|--------|-----------------------------------------------------------------------------------------| 
+| Hunyuan3D-DiT-v2-0     | 2025-01-21 | 2.6B   | [Download](https://huggingface.co/tencent/Hunyuan3D-2)                                  |
+| Hunyuan3D-Paint-v2-0   | 2025-01-21 | 1.3B   | [Download](https://huggingface.co/tencent/Hunyuan3D-2)                                  |
+| Hunyuan3D-Delight-v2-0 | 2025-01-21 | 1.3B   | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-delight-v2-0) | 
+
+
 
 ## 🤗 Get Started with Hunyuan3D 2.0
 
@@ -207,7 +208,6 @@ We would like to thank the contributors to
 the [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), [CraftsMan3D](https://github.com/wyysf-98/CraftsMan3D),
 and [Michelangelo](https://github.com/NeuralCarver/Michelangelo/tree/main) repositories, for their open research and
 exploration.
-
 
 ## Star History
 

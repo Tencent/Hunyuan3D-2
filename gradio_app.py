@@ -71,8 +71,9 @@ def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
     with open(output_html_path, 'w') as f:
         f.write(template_html.replace('<model-viewer>', obj_html))
 
-    iframe_tag = f'<iframe src="/static/{output_html_path}" height="{height}" width="100%" frameborder="0"></iframe>'
-    print(f'Find html {output_html_path}, {os.path.exists(output_html_path)}')
+    rel_path = os.path.relpath(output_html_path, SAVE_DIR)
+    iframe_tag = f'<iframe src="/static/{rel_path}" height="{height}" width="100%" frameborder="0"></iframe>'
+    print(f'Find html file {output_html_path}, {os.path.exists(output_html_path)}, relative HTML path is /static/{rel_path}')
 
     return f"""
         <div style='height: {height}; width: 100%;'>

@@ -269,7 +269,7 @@ def build_app():
                                         label="Text Prompts", examples_per_page=18)
 
         if not HAS_TEXTUREGEN:
-            gr.HTML(""")
+            gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
                 Texture synthesis is disable due to missing requirements,

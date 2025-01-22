@@ -394,6 +394,7 @@ std::vector<std::vector<torch::Tensor>> build_hierarchy(std::vector<torch::Tenso
     std::vector<torch::Tensor> grid_evencorners(grids.size());
     std::vector<torch::Tensor> grid_oddcorners(grids.size());
 
+
     texture_positions[0] = torch::zeros({static_cast<int64_t>(seq2pos.size() / 3), static_cast<int64_t>(3)}, float_options);
     texture_positions[1] = torch::zeros({static_cast<int64_t>(seq2pos.size() / 3)}, float_options);
     float* positions_out_ptr = texture_positions[0].data_ptr<float>();

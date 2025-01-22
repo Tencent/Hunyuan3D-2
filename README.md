@@ -1,4 +1,5 @@
 [中文阅读](README_zh_cn.md)
+[日本語で読む](README_ja_jp.md)
 
 <p align="center"> 
   <img src="./assets/images/teaser.jpg">
@@ -7,12 +8,13 @@
 </p>
 
 <div align="center">
-  <a href=https://3d.hunyuan.tencent.com target="_blank"><img src=https://img.shields.io/badge/Official%20Site-black.svg?logo=homepage height=22px></a>
+  <a href=https://3d.hunyuan.tencent.com target="_blank"><img src=https://img.shields.io/badge/Official%20Site-333399.svg?logo=homepage height=22px></a>
   <a href=https://huggingface.co/spaces/tencent/Hunyuan3D-2  target="_blank"><img src=https://img.shields.io/badge/%F0%9F%A4%97%20Demo-276cb4.svg height=22px></a>
   <a href=https://huggingface.co/tencent/Hunyuan3D-2 target="_blank"><img src=https://img.shields.io/badge/%F0%9F%A4%97%20Models-d96902.svg height=22px></a>
   <a href=https://3d-models.hunyuan.tencent.com/ target="_blank"><img src= https://img.shields.io/badge/Page-bb8a2e.svg?logo=github height=22px></a>
   <a href=https://discord.gg/GuaWYwzKbX target="_blank"><img src= https://img.shields.io/badge/Discord-white.svg?logo=discord height=22px></a>
-  <a href=https://github.com/Tencent/Hunyuan3D-2/blob/main/assets/report/Tencent_Hunyuan3D_2_0.pdf target="_blank"><img src=https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv height=22px></a>
+  <a href=https://arxiv.org/abs/2501.12202 target="_blank"><img src=https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv height=22px></a>
+  <a href=https://x.com/txhunyuan target="_blank"><img src=https://img.shields.io/badge/Hunyuan-black.svg?logo=x height=22px></a>
 </div>
 
 
@@ -23,15 +25,29 @@
 [//]: # (  <a href="#"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/v/mulankit?logo=pypi"  height=22px></a>)
 
 <br>
+
+> Join our **[Wechat](#)** and **[Discord](https://discord.gg/GuaWYwzKbX)** group to discuss and find help from us.
+
+| Wechat Group                                     | Xiaohongshu                                           | X                                           | Discord                                           |
+|--------------------------------------------------|-------------------------------------------------------|---------------------------------------------|---------------------------------------------------|
+| <img src="assets/qrcode/wechat.png"  height=140> | <img src="assets/qrcode/xiaohongshu.png"  height=140> | <img src="assets/qrcode/x.png"  height=140> | <img src="assets/qrcode/discord.png"  height=140> |        
+
+---
+
 <p align="center">
 “ Living out everyone’s imagination on creating and manipulating 3D assets.”
 </p>
 
+
+
 ## 🔥 News
 
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
-- Jan 21, 2025: 💬 Release inference code and pretrained models of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
-- Jan 21, 2025: 💬 Release Hunyuan3D 2.0. Please give it a try via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) our [official site](https://3d.hunyuan.tencent.com)!
+- Jan 21, 2025: 💬 Release inference code and pretrained models
+  of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
+- Jan 21, 2025: 💬 Release Hunyuan3D 2.0. Please give it a try
+  via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2)
+  our [official site](https://3d.hunyuan.tencent.com)!
 
 ## **Abstract**
 
@@ -107,6 +123,7 @@ pip install -r requirements.txt
 # for texture
 cd hy3dgen/texgen/custom_rasterizer
 python3 setup.py install
+cd ../../..
 cd hy3dgen/texgen/differentiable_renderer
 bash compile_mesh_painter.sh
 ```
@@ -187,7 +204,10 @@ If you found this repository helpful, please cite our reports:
 ## Acknowledgements
 
 We would like to thank the contributors to
-the [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), [CraftsMan3D](https://github.com/wyysf-98/CraftsMan3D), and [Michelangelo](https://github.com/NeuralCarver/Michelangelo/tree/main) repositories, for their open research and exploration.
+the [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), [CraftsMan3D](https://github.com/wyysf-98/CraftsMan3D),
+and [Michelangelo](https://github.com/NeuralCarver/Michelangelo/tree/main) repositories, for their open research and
+exploration.
+
 
 ## Star History
 

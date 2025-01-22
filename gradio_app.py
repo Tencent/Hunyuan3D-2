@@ -72,8 +72,9 @@ def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
     with open(output_html_path, 'w', encoding='utf-8') as f:
         f.write(template_html.replace('<model-viewer>', obj_html))
 
-    html_path = '/'.join(Path(output_html_path).parts[1:])
-    iframe_tag = f'<iframe src="/static/{html_path}" height="{height}" width="100%" frameborder="0"></iframe>'
+
+    output_html_path = output_html_path.replace(SAVE_DIR + '/', '')
+    iframe_tag = f'<iframe src="/static/{output_html_path}" height="{height}" width="100%" frameborder="0"></iframe>'
     print(f'Find html {output_html_path}, {os.path.exists(output_html_path)}')
 
     return f"""
@@ -139,7 +140,7 @@ def _gen_shape(
     time_meta['image_to_textured_3d'] = {'total': time.time() - start_time}
     time_meta['total'] = time.time() - start_time_0
     stats['time'] = time_meta
-    return mesh, save_folder
+    return mesh, image, save_folder
 
 
 def generation_all(
@@ -151,7 +152,7 @@ def generation_all(
     octree_resolution=256,
     check_box_rembg=False
 ):
-    mesh, save_folder = _gen_shape(
+    mesh, image, save_folder = _gen_shape(
         caption,
         image,
         steps=steps,
@@ -184,7 +185,7 @@ def shape_generation(
     octree_resolution=256,
     check_box_rembg=False,
 ):
-    mesh, save_folder = _gen_shape(
+    mesh, image, save_folder = _gen_shape(
         caption,
         image,
         steps=steps,
@@ -219,19 +220,9 @@ def build_app():
       <a href="https://huggingface.co/Tencent/Hunyuan3D-2"> Models</a> &ensp;
     </div>
     """
-    css = """
-    .json-output {
-        height: 578px;
-    }
-    .json-output .json-holder {
-        height: 538px;
-        overflow-y: scroll;
-    }
-    """
 
-    with gr.Blocks(theme=gr.themes.Base(), css=css, title='Hunyuan-3D-2.0') as demo:
-        if not gr.__version__.startswith('4'):
-            gr.HTML(title_html)
+    with gr.Blocks(theme=gr.themes.Base(), title='Hunyuan-3D-2.0') as demo:
+        gr.HTML(title_html)
 
         with gr.Row():
             with gr.Column(scale=2):
@@ -280,7 +271,7 @@ def build_app():
                                         label="Text Prompts", examples_per_page=18)
 
         if not HAS_TEXTUREGEN:
-            gr.HTML(""")
+            gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
                 Texture synthesis is disable due to missing requirements,
@@ -341,7 +332,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
-    parser.add_argument('--cache-path', type=str, default='./gradio_cache')
+    parser.add_argument('--cache-path', type=str, default='gradio_cache')
     parser.add_argument('--enable_t23d', action='store_true')
     args = parser.parse_args()
 

@@ -26,7 +26,7 @@ def get_example_txt_list():
 
 def gen_save_folder(max_size=60):
     os.makedirs(SAVE_DIR, exist_ok=True)
-    exists = set(int(_) for _ in os.listdir(SAVE_DIR) if not _.startswith("."))
+    exists = set(int(_) for _ in os.listdir(SAVE_DIR) if _.isdigit())
     cur_id = min(set(range(max_size)) - exists) if len(exists) < max_size else -1
     if os.path.exists(f"{SAVE_DIR}/{(cur_id + 1) % max_size}"):
         shutil.rmtree(f"{SAVE_DIR}/{(cur_id + 1) % max_size}")

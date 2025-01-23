@@ -124,7 +124,7 @@ cd hy3dgen/texgen/custom_rasterizer
 python3 setup.py install
 cd ../../..
 cd hy3dgen/texgen/differentiable_renderer
-bash compile_mesh_painter.sh OR python3 setup.py install (on Windows)
+python3 setup.py install
 ```
 
 ### API Usage

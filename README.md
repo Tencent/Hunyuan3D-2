@@ -190,6 +190,9 @@ If you found this repository helpful, please cite our reports:
     title={Hunyuan3D 2.0: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation},
     author={Tencent Hunyuan3D Team},
     year={2025},
+    eprint={2501.12202},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
 }
 
 @misc{yang2024tencent,

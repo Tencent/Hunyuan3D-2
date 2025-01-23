@@ -35,7 +35,6 @@ def image_to_3d(image_path='assets/demo.png'):
     model_path = 'tencent/Hunyuan3D-2'
 
     image = Image.open(image_path)
-    image = image.resize((1024, 1024))
 
     if image.mode == 'RGB':
         image = rembg(image)

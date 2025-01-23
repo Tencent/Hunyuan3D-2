@@ -146,6 +146,40 @@ class Hunyuan3DPaintPipeline:
 
         return texture
 
+    def recenter_image(self, image, border_ratio=0.2):
+        if image.mode == 'RGB':
+            return image
+        elif image.mode == 'L':
+            image = image.convert('RGB')
+            return image
+
+        alpha_channel = np.array(image)[:, :, 3]
+        non_zero_indices = np.argwhere(alpha_channel > 0)
+        if non_zero_indices.size == 0:
+            raise ValueError("Image is fully transparent")
+
+        min_row, min_col = non_zero_indices.min(axis=0)
+        max_row, max_col = non_zero_indices.max(axis=0)
+
+        cropped_image = image.crop((min_col, min_row, max_col + 1, max_row + 1))
+
+        width, height = cropped_image.size
+        border_width = int(width * border_ratio)
+        border_height = int(height * border_ratio)
+
+        new_width = width + 2 * border_width
+        new_height = height + 2 * border_height
+
+        square_size = max(new_width, new_height)
+
+        new_image = Image.new('RGBA', (square_size, square_size), (255, 255, 255, 0))
+
+        paste_x = (square_size - new_width) // 2 + border_width
+        paste_y = (square_size - new_height) // 2 + border_height
+
+        new_image.paste(cropped_image, (paste_x, paste_y))
+        return new_image
+
     @torch.no_grad()
     def __call__(self, mesh, image):
 
@@ -153,6 +187,8 @@ class Hunyuan3DPaintPipeline:
             image_prompt = Image.open(image)
         else:
             image_prompt = image
+
+        image_prompt = self.recenter_image(image_prompt)
 
         image_prompt = self.models['delight_model'](image_prompt)
 

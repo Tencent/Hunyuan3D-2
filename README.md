@@ -39,7 +39,7 @@
 
 ## 🔥 News
 
-- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/Tencent/Hunyuan3D-2/pull/13), [ComfyUI support](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and other awesome [extensions](#community-resources).
+- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Comfy3D-WinPortable/releases/tag/r8-hunyuan3d2), [ComfyUI support](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and other awesome [extensions](#community-resources).
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
 - Jan 21, 2025: 💬 Release inference code and pretrained models
   of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
@@ -209,6 +209,7 @@ Thanks for the contributions of community members, here we have these great exte
 
 - [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
 - [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
+- [📦 A bundle for running on Windows | 整合包](https://github.com/YanWenKun/Comfy3D-WinPortable/releases/tag/r8-hunyuan3d2)
 
 ## Acknowledgements
 

@@ -4,7 +4,6 @@
 <p align="center"> 
   <img src="./assets/images/teaser.jpg">
 
-
 </p>
 
 <div align="center">
@@ -15,8 +14,8 @@
   <a href=https://discord.gg/GuaWYwzKbX target="_blank"><img src= https://img.shields.io/badge/Discord-white.svg?logo=discord height=22px></a>
   <a href=https://arxiv.org/abs/2501.12202 target="_blank"><img src=https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv height=22px></a>
   <a href=https://x.com/txhunyuan target="_blank"><img src=https://img.shields.io/badge/Hunyuan-black.svg?logo=x height=22px></a>
+ <a href="#community-resources" target="_blank"><img src=https://img.shields.io/badge/Community-lavender.svg?logo=homeassistantcommunitystore height=22px></a>
 </div>
-
 
 [//]: # (  <a href=# target="_blank"><img src=https://img.shields.io/badge/Report-b5212f.svg?logo=arxiv height=22px></a>)
 
@@ -40,11 +39,12 @@
 
 ## 🔥 News
 
+- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/Tencent/Hunyuan3D-2/pull/13), [ComfyUI support](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and other awesome [extensions](#community-resources).
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
 - Jan 21, 2025: 💬 Release inference code and pretrained models
   of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
 - Jan 21, 2025: 💬 Release Hunyuan3D 2.0. Please give it a try
-  via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2)
+  via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) and
   our [official site](https://3d.hunyuan.tencent.com)!
 
 ## **Abstract**
@@ -108,8 +108,6 @@ Generation results of Hunyuan3D 2.0:
 | Hunyuan3D-DiT-v2-0     | 2025-01-21 | 2.6B   | [Download](https://huggingface.co/tencent/Hunyuan3D-2)                                  |
 | Hunyuan3D-Paint-v2-0   | 2025-01-21 | 1.3B   | [Download](https://huggingface.co/tencent/Hunyuan3D-2)                                  |
 | Hunyuan3D-Delight-v2-0 | 2025-01-21 | 1.3B   | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-delight-v2-0) | 
-
-
 
 ## 🤗 Get Started with Hunyuan3D 2.0
 
@@ -204,6 +202,13 @@ If you found this repository helpful, please cite our reports:
     primaryClass={cs.CV}
 }
 ```
+
+## Community Resources
+
+Thanks for the contributions of community members, here we have these great extensions of Hunyuan3D 2.0:
+
+- [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
+- [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
 
 ## Acknowledgements
 

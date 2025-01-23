@@ -3,7 +3,7 @@
 
 <p align="center"> 
   <img src="./assets/images/teaser.jpg">
-
+hehe joł
 </p>
 
 <div align="center">

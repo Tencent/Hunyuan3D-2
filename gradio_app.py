@@ -74,8 +74,9 @@ def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
 
     rel_path = os.path.relpath(output_html_path, SAVE_DIR)
     iframe_tag = f'<iframe src="/static/{rel_path}" height="{height}" width="100%" frameborder="0"></iframe>'
-    print(f'Find html file {output_html_path}, {os.path.exists(output_html_path)}, relative HTML path is /static/{rel_path}')
-    
+    print(
+        f'Find html file {output_html_path}, {os.path.exists(output_html_path)}, relative HTML path is /static/{rel_path}')
+
     return f"""
         <div style='height: {height}; width: 100%;'>
         {iframe_tag}
@@ -331,6 +332,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
+    parser.add_argument('--host', type=str, default='0.0.0.0')
     parser.add_argument('--cache-path', type=str, default='gradio_cache')
     parser.add_argument('--enable_t23d', action='store_true')
     args = parser.parse_args()
@@ -351,7 +353,7 @@ if __name__ == '__main__':
     """
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
-    
+
     from hy3dgen.texgen import Hunyuan3DPaintPipeline
 
     texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
@@ -395,4 +397,4 @@ if __name__ == '__main__':
 
     demo = build_app()
     app = gr.mount_gradio_app(app, demo, path="/")
-    uvicorn.run(app, host="127.0.0.1", port=args.port)
+    uvicorn.run(app, host=args.host, port=args.port)

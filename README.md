@@ -197,8 +197,8 @@ If you found this repository helpful, please cite our reports:
 
 @misc{yang2024tencent,
     title={Tencent Hunyuan3D-1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation},
-    year={2024},
     author={Tencent Hunyuan3D Team},
+    year={2024},
     eprint={2411.02293},
     archivePrefix={arXiv},
     primaryClass={cs.CV}

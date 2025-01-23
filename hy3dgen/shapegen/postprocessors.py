@@ -22,6 +22,7 @@
 # fine-tuning enabling code and other elements of the foregoing made publicly available
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
+import os
 import tempfile
 from typing import Union
 
@@ -63,9 +64,15 @@ def remove_floater(mesh: pymeshlab.MeshSet):
 
 
 def pymeshlab2trimesh(mesh: pymeshlab.MeshSet):
-    with tempfile.NamedTemporaryFile(suffix='.ply', delete=True) as temp_file:
-        mesh.save_current_mesh(temp_file.name)
-        mesh = trimesh.load(temp_file.name)
+    temp_file = tempfile.NamedTemporaryFile(suffix='.ply', delete=True)
+    temp_file.close()
+    temp_file_name = temp_file.name
+    
+    mesh.save_current_mesh(temp_file_name)
+    mesh = trimesh.load(temp_file_name)
+    if os.path.exists(temp_file_name):
+        os.remove(temp_file_name)
+          
     # 检查加载的对象类型
     if isinstance(mesh, trimesh.Scene):
         combined_mesh = trimesh.Trimesh()
@@ -77,17 +84,23 @@ def pymeshlab2trimesh(mesh: pymeshlab.MeshSet):
 
 
 def trimesh2pymeshlab(mesh: trimesh.Trimesh):
-    with tempfile.NamedTemporaryFile(suffix='.ply', delete=True) as temp_file:
-        if isinstance(mesh, trimesh.scene.Scene):
-            for idx, obj in enumerate(mesh.geometry.values()):
-                if idx == 0:
-                    temp_mesh = obj
-                else:
-                    temp_mesh = temp_mesh + obj
-            mesh = temp_mesh
-        mesh.export(temp_file.name)
-        mesh = pymeshlab.MeshSet()
-        mesh.load_new_mesh(temp_file.name)
+    temp_file = tempfile.NamedTemporaryFile(suffix='.ply', delete=True)
+    temp_file.close()
+    temp_file_name = temp_file.name
+    
+    if isinstance(mesh, trimesh.scene.Scene):
+        for idx, obj in enumerate(mesh.geometry.values()):
+            if idx == 0:
+                temp_mesh = obj
+            else:
+                temp_mesh = temp_mesh + obj
+        mesh = temp_mesh
+    mesh.export(temp_file_name)
+    mesh = pymeshlab.MeshSet()
+    mesh.load_new_mesh(temp_file_name)
+    if os.path.exists(temp_file_name):
+        os.remove(temp_file_name)
+          
     return mesh
 
 
@@ -148,10 +161,15 @@ class DegenerateFaceRemover:
     ) -> Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput]:
         ms = import_mesh(mesh)
 
-        with tempfile.NamedTemporaryFile(suffix='.ply', delete=True) as temp_file:
-            ms.save_current_mesh(temp_file.name)
-            ms = pymeshlab.MeshSet()
-            ms.load_new_mesh(temp_file.name)
+        temp_file = tempfile.NamedTemporaryFile(suffix='.ply', delete=True)
+        temp_file.close()
+        temp_file_name = temp_file.name
 
+        ms.save_current_mesh(temp_file_name)
+        ms = pymeshlab.MeshSet()
+        ms.load_new_mesh(temp_file_name)
+        if os.path.exists(temp_file_name):
+            os.remove(temp_file_name)
+               
         mesh = export_mesh(mesh, ms)
         return mesh

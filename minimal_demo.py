@@ -23,6 +23,7 @@
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
 import torch
+from PIL import Image
 
 from hy3dgen.rembg import BackgroundRemover
 from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline, FaceReducer, FloaterRemover, DegenerateFaceRemover
@@ -30,10 +31,18 @@ from hy3dgen.text2image import HunyuanDiTPipeline
 
 
 def image_to_3d(image_path='assets/demo.png'):
+    rembg = BackgroundRemover()
     model_path = 'tencent/Hunyuan3D-2'
+
+    image = Image.open(image_path)
+    image = image.resize((1024, 1024))
+
+    if image.mode == 'RGB':
+        image = rembg(image)
+
     pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
 
-    mesh = pipeline(image=image_path, num_inference_steps=30, mc_algo='mc',
+    mesh = pipeline(image=image, num_inference_steps=30, mc_algo='mc',
                     generator=torch.manual_seed(2025))[0]
     mesh = FloaterRemover()(mesh)
     mesh = DegenerateFaceRemover()(mesh)
@@ -43,7 +52,7 @@ def image_to_3d(image_path='assets/demo.png'):
     try:
         from hy3dgen.texgen import Hunyuan3DPaintPipeline
         pipeline = Hunyuan3DPaintPipeline.from_pretrained(model_path)
-        mesh = pipeline(mesh, image=image_path)
+        mesh = pipeline(mesh, image=image)
         mesh.export('texture.glb')
     except Exception as e:
         print(e)
@@ -52,7 +61,7 @@ def image_to_3d(image_path='assets/demo.png'):
 
 def text_to_3d(prompt='a car'):
     rembg = BackgroundRemover()
-    t2i = HunyuanDiTPipeline('Tencent-Hunyuan--HunyuanDiT-v1.1-Diffusers-Distilled')
+    t2i = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
     model_path = 'tencent/Hunyuan3D-2'
     i23d = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(model_path)
 

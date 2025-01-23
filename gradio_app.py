@@ -19,7 +19,7 @@ def get_example_img_list():
 def get_example_txt_list():
     print('Loading example txt list ...')
     txt_list = list()
-    for line in open('./assets/example_prompts.txt'):
+    for line in open('./assets/example_prompts.txt', encoding='utf-8'):
         txt_list.append(line.strip())
     return txt_list
 
@@ -47,6 +47,7 @@ def export_mesh(mesh, save_folder, textured=False):
 
 
 def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
+    # Remove first folder from path to make relative path
     if textured:
         related_path = f"./textured_mesh.glb"
         template_name = './assets/modelviewer-textured-template.html'
@@ -56,7 +57,7 @@ def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
         template_name = './assets/modelviewer-template.html'
         output_html_path = os.path.join(save_folder, f'white_mesh.html')
 
-    with open(os.path.join(CURRENT_DIR, template_name), 'r') as f:
+    with open(os.path.join(CURRENT_DIR, template_name), 'r', encoding='utf-8') as f:
         template_html = f.read()
         obj_html = f"""
             <div class="column is-mobile is-centered">
@@ -68,13 +69,13 @@ def build_model_viewer_html(save_folder, height=660, width=790, textured=False):
             </div>
             """
 
-    with open(output_html_path, 'w') as f:
+    with open(output_html_path, 'w', encoding='utf-8') as f:
         f.write(template_html.replace('<model-viewer>', obj_html))
 
     rel_path = os.path.relpath(output_html_path, SAVE_DIR)
     iframe_tag = f'<iframe src="/static/{rel_path}" height="{height}" width="100%" frameborder="0"></iframe>'
     print(f'Find html file {output_html_path}, {os.path.exists(output_html_path)}, relative HTML path is /static/{rel_path}')
-
+    
     return f"""
         <div style='height: {height}; width: 100%;'>
         {iframe_tag}
@@ -138,7 +139,7 @@ def _gen_shape(
     time_meta['image_to_textured_3d'] = {'total': time.time() - start_time}
     time_meta['total'] = time.time() - start_time_0
     stats['time'] = time_meta
-    return mesh, save_folder
+    return mesh, image, save_folder
 
 
 def generation_all(
@@ -150,7 +151,7 @@ def generation_all(
     octree_resolution=256,
     check_box_rembg=False
 ):
-    mesh, save_folder = _gen_shape(
+    mesh, image, save_folder = _gen_shape(
         caption,
         image,
         steps=steps,
@@ -183,7 +184,7 @@ def shape_generation(
     octree_resolution=256,
     check_box_rembg=False,
 ):
-    mesh, save_folder = _gen_shape(
+    mesh, image, save_folder = _gen_shape(
         caption,
         image,
         steps=steps,
@@ -218,19 +219,9 @@ def build_app():
       <a href="https://huggingface.co/Tencent/Hunyuan3D-2"> Models</a> &ensp;
     </div>
     """
-    css = """
-    .json-output {
-        height: 578px;
-    }
-    .json-output .json-holder {
-        height: 538px;
-        overflow-y: scroll;
-    }
-    """
 
-    with gr.Blocks(theme=gr.themes.Base(), css=css, title='Hunyuan-3D-2.0') as demo:
-        if not gr.__version__.startswith('4'):
-            gr.HTML(title_html)
+    with gr.Blocks(theme=gr.themes.Base(), title='Hunyuan-3D-2.0') as demo:
+        gr.HTML(title_html)
 
         with gr.Row():
             with gr.Column(scale=2):
@@ -279,7 +270,7 @@ def build_app():
                                         label="Text Prompts", examples_per_page=18)
 
         if not HAS_TEXTUREGEN:
-            gr.HTML(""")
+            gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
                 Texture synthesis is disable due to missing requirements,
@@ -340,7 +331,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
-    parser.add_argument('--cache-path', type=str, default='./gradio_cache')
+    parser.add_argument('--cache-path', type=str, default='gradio_cache')
     parser.add_argument('--enable_t23d', action='store_true')
     args = parser.parse_args()
 
@@ -360,6 +351,11 @@ if __name__ == '__main__':
     """
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
+    
+    from hy3dgen.texgen import Hunyuan3DPaintPipeline
+
+    texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
+    HAS_TEXTUREGEN = True
 
     try:
         from hy3dgen.texgen import Hunyuan3DPaintPipeline
@@ -393,10 +389,10 @@ if __name__ == '__main__':
     # create a FastAPI app
     app = FastAPI()
     # create a static directory to store the static files
-    static_dir = Path('./gradio_cache')
+    static_dir = Path(SAVE_DIR).absolute()
     static_dir.mkdir(parents=True, exist_ok=True)
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
 
     demo = build_app()
     app = gr.mount_gradio_app(app, demo, path="/")
-    uvicorn.run(app, host="0.0.0.0", port=args.port)
+    uvicorn.run(app, host="127.0.0.1", port=args.port)

@@ -165,9 +165,9 @@ python3 gradio_app.py
     primaryClass={cs.CV}
 }
 
-@misc{yang2024tencent,
-    title={Tencent Hunyuan3D-1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation},
-    author={Tencent Hunyuan3D Team},
+@misc{yang2024hunyuan3d,
+    title={Hunyuan3D 1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation},
+    author={Xianghui Yang and Huiwen Shi and Bowen Zhang and Fan Yang and Jiacheng Wang and Hongxu Zhao and Xinhai Liu and Xinzhou Wang and Qingxiang Lin and Jiaao Yu and Lifu Wang and Jing Xu and Zebin He and Zhuo Chen and Sicong Liu and Junta Wu and Yihang Lian and Shaoxiong Yang and Yuhong Liu and Yong Yang and Di Wang and Jie Jiang and Chunchao Guo},
     year={2024},
     eprint={2411.02293},
     archivePrefix={arXiv},

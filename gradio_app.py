@@ -354,11 +354,6 @@ if __name__ == '__main__':
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
 
-    from hy3dgen.texgen import Hunyuan3DPaintPipeline
-
-    texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
-    HAS_TEXTUREGEN = True
-
     try:
         from hy3dgen.texgen import Hunyuan3DPaintPipeline
 

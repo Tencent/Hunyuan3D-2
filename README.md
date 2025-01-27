@@ -39,7 +39,7 @@
 
 ## 🔥 News
 
-- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other awesome [extensions](#community-resources).
+- Jan 27, 2025: 🛠️ Release Blender addon for Hunyuan3D 2.0, Check it out [here](#blender-addon).- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other awesome [extensions](#community-resources).
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
 - Jan 21, 2025: 💬 Release inference code and pretrained models
   of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
@@ -111,7 +111,13 @@ Generation results of Hunyuan3D 2.0:
 
 ## 🤗 Get Started with Hunyuan3D 2.0
 
-You may follow the next steps to use Hunyuan3D 2.0 via code or the Gradio App.
+You may follow the next steps to use Hunyuan3D 2.0 via:
+
+- [Code](#code-usage)
+- [Gradio App](#gradio-app)
+- [API Server](#api-server)
+- [Blender Addon](#blender-addon)
+- [Official Site](#official-site)
 
 ### Install Requirements
 
@@ -127,7 +133,7 @@ cd hy3dgen/texgen/differentiable_renderer
 bash compile_mesh_painter.sh OR python3 setup.py install (on Windows)
 ```
 
-### API Usage
+### Code Usage
 
 We designed a diffusers-like API to use our shape generation model - Hunyuan3D-DiT and texture synthesis model -
 Hunyuan3D-Paint.
@@ -169,7 +175,34 @@ You could also host a [Gradio](https://www.gradio.app/) App in your own computer
 python3 gradio_app.py
 ```
 
+### API Server
+
+You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, and e.t.c.
+
+```bash
+python api_server.py --host 0.0.0.0 --port 8080
+```
+A demo post request for image to 3D without texture.
+```bash
+img_b64_str=$(base64 -i assets/demo.png)
+curl -X POST "http://localhost:8080/generate" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "image": "'"$img_b64_str"'",
+         }' \
+     -o test2.glb
+```
+
+### Blender Addon
+
+With an API server launched, you could also directly use Hunyuan3D 2.0 in your blender with our Blender Addon. Please follow our tutorial to install and use.
+
+
+
+### Official Site
+
 Don't forget to visit [Hunyuan3D](https://3d.hunyuan.tencent.com) for quick use, if you don't want to host yourself.
+
 
 ## 📑 Open-Source Plan
 

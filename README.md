@@ -39,7 +39,8 @@
 
 ## 🔥 News
 
-- Jan 27, 2025: 🛠️ Release Blender addon for Hunyuan3D 2.0, Check it out [here](#blender-addon).- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other awesome [extensions](#community-resources).
+- Jan 27, 2025: 🛠️ Release Blender addon for Hunyuan3D 2.0, Check it out [here](#blender-addon).
+- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other awesome [extensions](#community-resources).
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
 - Jan 21, 2025: 💬 Release inference code and pretrained models
   of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).

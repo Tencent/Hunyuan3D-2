@@ -25,6 +25,11 @@
 
 <br>
 
+> From Hunyuan3D Team: Happy New Year!
+
+![happynewyear](https://github.com/user-attachments/assets/69aa40a7-8657-4c2b-8efd-99eda6c26fe4)
+
+
 > Join our **[Wechat](#)** and **[Discord](https://discord.gg/GuaWYwzKbX)** group to discuss and find help from us.
 
 | Wechat Group                                     | Xiaohongshu                                           | X                                           | Discord                                           |

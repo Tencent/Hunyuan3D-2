@@ -25,6 +25,11 @@
 
 <br>
 
+> 新年快乐!
+
+![happynewyear](https://github.com/user-attachments/assets/69aa40a7-8657-4c2b-8efd-99eda6c26fe4)
+
+
 > 加入我们的 **[微信群](#)** and **[Discord 社区](https://discord.gg/GuaWYwzKbX)** 讨论，获取最新进展以及帮助吧.
 
 | Wechat Group                                     | Xiaohongshu                                           | X                                           | Discord                                           |

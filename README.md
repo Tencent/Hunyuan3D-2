@@ -42,9 +42,9 @@
 - Jan 27, 2025: 🛠️ Release Blender addon for Hunyuan3D 2.0, Check it out [here](#blender-addon).
 - Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other awesome [extensions](#community-resources).
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
-- Jan 21, 2025: 💬 Release inference code and pretrained models
+- Jan 21, 2025: 🤗 Release inference code and pretrained models
   of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
-- Jan 21, 2025: 💬 Release Hunyuan3D 2.0. Please give it a try
+- Jan 21, 2025: 🤗 Release Hunyuan3D 2.0. Please give it a try
   via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) and
   our [official site](https://3d.hunyuan.tencent.com)!
 
@@ -103,6 +103,8 @@ Generation results of Hunyuan3D 2.0:
 </p>
 
 ### Pretrained Models
+
+It takes 11.5 GB VRAM for shape generation and 24.5 GB for shape and texture generation in total.
 
 | Model                  | Date       | Params | Huggingface                                                                             |
 |------------------------|------------|--------|-----------------------------------------------------------------------------------------| 
@@ -249,6 +251,7 @@ Thanks for the contributions of community members, here we have these great exte
 - [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
 - [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
 - [📦 A bundle for running on Windows | 整合包](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable)
+- [Hunyuan3D-2GP](https://github.com/deepbeepmeep/Hunyuan3D-2GP)
 
 
 ## Acknowledgements

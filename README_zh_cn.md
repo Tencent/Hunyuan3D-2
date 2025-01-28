@@ -28,8 +28,8 @@
 > 加入我们的 **[微信群](#)** and **[Discord 社区](https://discord.gg/GuaWYwzKbX)** 讨论，获取最新进展以及帮助吧.
 
 | Wechat Group                                     | Xiaohongshu                                           | X                                           | Discord                                           |
-|--------------------------------------------------|-------------------------------------------------------|---------------------------------------------|---------------------------------------------------|
-| <img src="assets/qrcode/wechat.png"  height=140> | <img src="assets/qrcode/xiaohongshu.png"  height=140> | <img src="assets/qrcode/x.png"  height=140> | <img src="assets/qrcode/discord.png"  height=140> |     
+| ------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------- | ------------------------------------------------- |
+| <img src="assets/qrcode/wechat.png"  height=140> | <img src="assets/qrcode/xiaohongshu.png"  height=140> | <img src="assets/qrcode/x.png"  height=140> | <img src="assets/qrcode/discord.png"  height=140> |
 
 ---
 
@@ -39,6 +39,8 @@
 </p>
 
 ## 🔥 最新消息
+- Jan 27, 2025: 🛠️ 发布 Blender 插件，欢迎[体验](#blender-addon).
+- Jan 23, 2025: 💬 感谢社区成员的 [Windows 安装工具](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI 支持 [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)， [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) 以及其他出色的 [扩展功能](#community-resources).
 - Jan 21, 2025: 💬 欢迎来我们的门户网站 [Hunyuan3D Studio](https://3d.hunyuan.tencent.com) 体验更多3D生成功能!
 - Jan 21, 2025: 💬 我们开源了 [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2)的推理代码和预训练权重.
 - Jan 21, 2025: 💬 我们发布了 [Hunyuan3D 2.0](https://huggingface.co/spaces/tencent/Hunyuan3D-2). 快来试试吧!
@@ -71,7 +73,7 @@
 数值结果表明，在生成的带纹理 3D 模型的质量以及对给定条件的遵循能力方面，混元 3D 2.0 超越了所有的基准模型。
 
 | Model                   | CMMD(⬇)   | FID_CLIP(⬇) | FID(⬇)      | CLIP-score(⬆) |
-|-------------------------|-----------|-------------|-------------|---------------|
+| ----------------------- | --------- | ----------- | ----------- | ------------- |
 | Top Open-source Model1  | 3.591     | 54.639      | 289.287     | 0.787         |
 | Top Close-source Model1 | 3.600     | 55.866      | 305.922     | 0.779         |
 | Top Close-source Model2 | 3.368     | 49.744      | 294.628     | 0.806         |
@@ -86,24 +88,38 @@
 
 ### 预训练模型
 
-| 模型名称                 | 发布日期       | Huggingface                                     |
-|----------------------|------------|--------------------------------------------------| 
-| Hunyuan3D-DiT-v2-0   | 2025-01-21 | [下载](https://huggingface.co/tencent/Hunyuan3D-2) |
-| Hunyuan3D-Paint-v2-0 | 2025-01-21 | [下载](https://huggingface.co/tencent/Hunyuan3D-2) |
+| 模型名称               | 发布日期   | 参数 | Huggingface                                                                         |
+| ---------------------- | ---------- | ---- | ----------------------------------------------------------------------------------- |
+| Hunyuan3D-DiT-v2-0     | 2025-01-21 | 2.6B | [下载](https://huggingface.co/tencent/Hunyuan3D-2)                                  |
+| Hunyuan3D-Paint-v2-0   | 2025-01-21 | 1.3B | [下载](https://huggingface.co/tencent/Hunyuan3D-2)                                  |
+| Hunyuan3D-Delight-v2-0 | 2025-01-21 | 1.3B | [下载](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-delight-v2-0) |
 
 ## 🤗快速入门 Hunyuan3D 2.0
 
 你可以按照以下步骤，通过代码或 Gradio 来使用混元 3D 2.0。
+
+- [代码使用](#代码使用方法)
+- [Gradio](#gradio-app-使用方法)
+- [API服务器](#api-服务器)
+- [Blender插件](#blender-插件)
+- [官方网站](#官方网站)
 
 ### 依赖包安装
 
 请通过官方网站安装 PyTorch。然后通过以下方式安装其他所需的依赖项。
 
 ```bash
-pip install -r assets/requirements.txt
+pip install -r requirements.txt
+# for texture
+cd hy3dgen/texgen/custom_rasterizer
+python3 setup.py install
+cd ../../..
+cd hy3dgen/texgen/differentiable_renderer
+python3 setup.py install
 ```
 
-### API 使用方法
+
+### 代码使用方法
 
 我们设计了一个类似于 diffusers 的 API 来使用我们的几何生成模型 — 混元 3D-DiT 和纹理合成模型 — 混元 3D-Paint。
 你可以通过以下方式使用 混元 3D-DiT：
@@ -137,9 +153,36 @@ mesh = pipeline(mesh, image='assets/demo.png')
 你也可以通过以下方式在自己的计算机上托管一个Gradio应用程序：
 
 ```bash
-pip3 install gradio==3.39.0
 python3 gradio_app.py
 ```
+
+### API 服务器
+
+You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, and e.t.c.
+
+```bash
+python api_server.py --host 0.0.0.0 --port 8080
+```
+A demo post request for image to 3D without texture.
+```bash
+img_b64_str=$(base64 -i assets/demo.png)
+curl -X POST "http://localhost:8080/generate" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "image": "'"$img_b64_str"'",
+         }' \
+     -o test2.glb
+```
+
+### Blender 插件
+
+With an API server launched, you could also directly use Hunyuan3D 2.0 in your blender with our [Blender Addon](blender_addon.py). Please follow our tutorial to install and use.
+
+https://github.com/user-attachments/assets/8230bfb5-32b1-4e48-91f4-a977c54a4f3e
+
+
+
+### 官方网站
 
 如果你不想自己托管，别忘了访问[混元 3D](https://3d.hunyuan.tencent.com)进行快速使用。
 

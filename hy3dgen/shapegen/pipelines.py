@@ -142,7 +142,6 @@ class Hunyuan3DDiTPipeline:
         config_path,
         device='cuda',
         dtype=torch.float16,
-        use_safetensors=None,
         **kwargs,
     ):
         # load config
@@ -150,16 +149,14 @@ class Hunyuan3DDiTPipeline:
             config = yaml.safe_load(f)
 
         # load ckpt
-        if use_safetensors:
-            ckpt_path = ckpt_path.replace('.ckpt', '.safetensors')
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"Model file {ckpt_path} not found")
         logger.info(f"Loading model from {ckpt_path}")
 
-        if use_safetensors:
+        if ckpt_path.endswith('.safetensors'):
             # parse safetensors
             import safetensors.torch
-            safetensors_ckpt = safetensors.torch.load_file(ckpt_path, device='cpu', weights_only=True)
+            safetensors_ckpt = safetensors.torch.load_file(ckpt_path, device='cpu')
             ckpt = {}
             for key, value in safetensors_ckpt.items():
                 model_name = key.split('.')[0]
@@ -169,6 +166,7 @@ class Hunyuan3DDiTPipeline:
                 ckpt[model_name][new_key] = value
         else:
             ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
+
         # load model
         model = instantiate_from_config(config['model'])
         model.load_state_dict(ckpt['model'])
@@ -199,24 +197,24 @@ class Hunyuan3DDiTPipeline:
     def from_pretrained(
         cls,
         model_path,
-        ckpt_name='model.ckpt',
-        config_name='config.yaml',
         device='cuda',
         dtype=torch.float16,
         use_safetensors=None,
+        variant=None,
+        subfolder='hunyuan3d-dit-v2-0',
         **kwargs,
     ):
         original_model_path = model_path
         if not os.path.exists(model_path):
             # try local path
             base_dir = os.environ.get('HY3DGEN_MODELS', '~/.cache/hy3dgen')
-            model_path = os.path.expanduser(os.path.join(base_dir, model_path, 'hunyuan3d-dit-v2-0'))
+            model_path = os.path.expanduser(os.path.join(base_dir, model_path, subfolder))
             if not os.path.exists(model_path):
                 try:
                     import huggingface_hub
                     # download from huggingface
                     path = huggingface_hub.snapshot_download(repo_id=original_model_path)
-                    model_path = os.path.join(path, 'hunyuan3d-dit-v2-0')
+                    model_path = os.path.join(path, subfolder)
                 except ImportError:
                     logger.warning(
                         "You need to install HuggingFace Hub to load models from the hub."
@@ -225,14 +223,19 @@ class Hunyuan3DDiTPipeline:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model path {original_model_path} not found")
 
-        config_path = os.path.join(model_path, config_name)
+        extension = 'ckpt' if not use_safetensors else 'safetensors'
+        variant = '' if variant is None else f'.{variant}'
+        ckpt_name = f'model{variant}.{extension}'
+        config_path = os.path.join(model_path, 'config.yaml')
         ckpt_path = os.path.join(model_path, ckpt_name)
+
         return cls.from_single_file(
             ckpt_path,
             config_path,
             device=device,
             dtype=dtype,
             use_safetensors=use_safetensors,
+            variant=variant,
             **kwargs
         )
 

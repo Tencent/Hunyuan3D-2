@@ -159,7 +159,7 @@ class Hunyuan3DDiTPipeline:
         if use_safetensors:
             # parse safetensors
             import safetensors.torch
-            safetensors_ckpt = safetensors.torch.load_file(ckpt_path, device='cpu')
+            safetensors_ckpt = safetensors.torch.load_file(ckpt_path, device='cpu', weights_only=True)
             ckpt = {}
             for key, value in safetensors_ckpt.items():
                 model_name = key.split('.')[0]
@@ -168,7 +168,7 @@ class Hunyuan3DDiTPipeline:
                     ckpt[model_name] = {}
                 ckpt[model_name][new_key] = value
         else:
-            ckpt = torch.load(ckpt_path, map_location='cpu')
+            ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
         # load model
         model = instantiate_from_config(config['model'])
         model.load_state_dict(ckpt['model'])

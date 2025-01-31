@@ -207,10 +207,22 @@ def shape_generation(
     )
 
 
+def generate_image(caption):
+    """Generate image from text using the text-to-image model"""
+    if not HAS_T2I:
+        raise gr.Error("Text to Image is disabled. Please enable it by `python gradio_app.py --enable_t23d`.")
+    
+    t2i_worker = get_t2i_worker()
+    if t2i_worker is None:
+        raise gr.Error("Text to Image model failed to load.")
+        
+    image = t2i_worker(caption)
+    return image
+
+
 def build_app():
     title_html = """
     <div style="font-size: 2em; font-weight: bold; text-align: center; margin-bottom: 5px">
-
     Hunyuan3D-2: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation
     </div>
     <div align="center">
@@ -229,26 +241,29 @@ def build_app():
 
         with gr.Row():
             with gr.Column(scale=2):
-                with gr.Tabs() as tabs_prompt:
-                    with gr.Tab('Image Prompt', id='tab_img_prompt') as tab_ip:
-                        image = gr.Image(label='Image', type='pil', image_mode='RGBA', height=290)
-                        with gr.Row():
-                            check_box_rembg = gr.Checkbox(value=True, label='Remove Background')
-
-                    with gr.Tab('Text Prompt', id='tab_txt_prompt', visible=HAS_T2I) as tab_tp:
-                        caption = gr.Textbox(label='Text Prompt',
-                                             placeholder='HunyuanDiT will be used to generate image.',
-                                             info='Example: A 3D model of a cute cat, white background')
+                with gr.Group():
+                    caption = gr.Textbox(
+                        label='Text Prompt',
+                        placeholder='Describe what you want to generate',
+                        info='Example: A 3D model of a cute cat, white background',
+                        value="A red apple"
+                    )
+                    
+                    with gr.Row():
+                        gen_img_btn = gr.Button("1. Generate Image", variant='primary')
+                    
+                    image = gr.Image(label='Generated/Input Image', type='pil', image_mode='RGBA')
+                    
+                    with gr.Row():
+                        gen_shape_btn = gr.Button("2a. Generate Shape Only", variant='primary')
+                        gen_all_btn = gr.Button("2b. Generate Shape & Texture", variant='primary', visible=HAS_TEXTUREGEN)
 
                 with gr.Accordion('Advanced Options', open=False):
                     num_steps = gr.Slider(maximum=50, minimum=20, value=30, step=1, label='Inference Steps')
                     octree_resolution = gr.Dropdown([256, 384, 512], value=256, label='Octree Resolution')
                     cfg_scale = gr.Number(value=5.5, label='Guidance Scale')
                     seed = gr.Slider(maximum=1e7, minimum=0, value=1234, label='Seed')
-
-                with gr.Group():
-                    btn = gr.Button(value='Generate Shape Only', variant='primary')
-                    btn_all = gr.Button(value='Generate Shape and Texture', variant='primary', visible=HAS_TEXTUREGEN)
+                    check_box_rembg = gr.Checkbox(value=True, label='Remove Background')
 
                 with gr.Group():
                     file_out = gr.File(label="File", visible=False)
@@ -277,7 +292,7 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Texture synthesis is disable due to missing requirements,
+                Texture synthesis is disabled due to missing requirements,
                  please install requirements following README.md to activate it.
             </div>
             """)
@@ -285,15 +300,19 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Text to 3D is disable. To activate it, please run `python gradio_app.py --enable_t23d`.
+                Text to 3D is disabled. To activate it, please run `python gradio_app.py --enable_t23d`.
             </div>
             """)
 
-        tab_gi.select(fn=lambda: gr.update(selected='tab_img_prompt'), outputs=tabs_prompt)
-        if HAS_T2I:
-            tab_gt.select(fn=lambda: gr.update(selected='tab_txt_prompt'), outputs=tabs_prompt)
+        # Image generation events
+        gen_img_btn.click(
+            fn=generate_image,
+            inputs=[caption],
+            outputs=[image]
+        )
 
-        btn.click(
+        # 3D generation events
+        gen_shape_btn.click(
             shape_generation,
             inputs=[
                 caption,
@@ -310,7 +329,7 @@ def build_app():
             outputs=[file_out],
         )
 
-        btn_all.click(
+        gen_all_btn.click(
             generation_all,
             inputs=[
                 caption,

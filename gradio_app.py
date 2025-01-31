@@ -33,7 +33,7 @@ def gen_save_folder(max_size=60):
         print(f"remove {SAVE_DIR}/{(cur_id + 1) % max_size} success !!!")
     save_folder = f"{SAVE_DIR}/{max(0, cur_id)}"
     os.makedirs(save_folder, exist_ok=True)
-    print(f"mkdir {save_folder} suceess !!!")
+    print(f"mkdir {save_folder} success !!!")
     return save_folder
 
 
@@ -104,7 +104,7 @@ def _gen_shape(
         try:
             image = t2i_worker(caption)
         except Exception as e:
-            raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
+            raise gr.Error(f"Text to 3D is disabled. Please enable it by restarted the app with `python gradio_app.py --enable_t23d`.")
         time_meta['text2image'] = time.time() - start_time
 
     image.save(os.path.join(save_folder, 'input.png'))
@@ -274,15 +274,15 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Texture synthesis is disable due to missing requirements,
-                 please install requirements following README.md to activate it.
+                Texture synthesis is disabled due to missing requirements,
+                 please refer to the README.md and install the missing requirements to activate it.
             </div>
             """)
         if not args.enable_t23d:
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Text to 3D is disable. To activate it, please run `python gradio_app.py --enable_t23d`.
+                Text to 3D is disabled. Please enable it by restarted the app with `python gradio_app.py --enable_t23d`.
             </div>
             """)
 
@@ -362,7 +362,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         print("Failed to load texture generator.")
-        print('Please try to install requirements by following README.md')
+        print('Please refer to the README.md and install the missing requirements to activate it.')
         HAS_TEXTUREGEN = False
 
     HAS_T2I = False

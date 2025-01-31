@@ -186,9 +186,11 @@ class ModelWorker:
             mesh = FaceReducer()(mesh, max_facenum=params.get('face_count', 40000))
             mesh = self.pipeline_tex(mesh, image)
 
-        with tempfile.NamedTemporaryFile(suffix='.glb', delete=True) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix='.glb', delete=False) as temp_file:
             mesh.export(temp_file.name)
             mesh = trimesh.load(temp_file.name)
+            temp_file.close()
+            os.unlink(temp_file.name)
             save_path = os.path.join(SAVE_DIR, f'{str(uid)}.glb')
             mesh.export(save_path)
 
@@ -258,7 +260,7 @@ async def status(uid: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=str, default="8081")
+    parser.add_argument("--port", type=int, default=8081)
     parser.add_argument("--model_path", type=str, default='tencent/Hunyuan3D-2')
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--limit-model-concurrency", type=int, default=5)

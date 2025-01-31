@@ -4,8 +4,11 @@ import time
 from glob import glob
 from pathlib import Path
 
-import gradio as gr
 import torch
+torch.cuda.empty_cache()
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
+import gradio as gr
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -102,7 +105,7 @@ def _gen_shape(
     if image is None:
         start_time = time.time()
         try:
-            image = t2i_worker(caption)
+            image = get_t2i_worker()(caption)
         except Exception as e:
             raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
         time_meta['text2image'] = time.time() - start_time
@@ -112,7 +115,7 @@ def _gen_shape(
     print(image.mode)
     if check_box_rembg or image.mode == "RGB":
         start_time = time.time()
-        image = rmbg_worker(image.convert('RGB'))
+        image = get_rmbg_worker()(image.convert('RGB'))
         time_meta['rembg'] = time.time() - start_time
 
     image.save(os.path.join(save_folder, 'rembg.png'))
@@ -122,7 +125,7 @@ def _gen_shape(
 
     generator = torch.Generator()
     generator = generator.manual_seed(int(seed))
-    mesh = i23d_worker(
+    mesh = get_i23d_worker()(
         image=image,
         num_inference_steps=steps,
         guidance_scale=guidance_scale,
@@ -130,9 +133,9 @@ def _gen_shape(
         octree_resolution=octree_resolution
     )[0]
 
-    mesh = FloaterRemover()(mesh)
-    mesh = DegenerateFaceRemover()(mesh)
-    mesh = FaceReducer()(mesh)
+    mesh = get_floater_remover()(mesh)
+    mesh = get_degenerate_face_remover()(mesh)
+    mesh = get_face_reducer()(mesh)
 
     stats['number_of_faces'] = mesh.faces.shape[0]
     stats['number_of_vertices'] = mesh.vertices.shape[0]
@@ -164,7 +167,7 @@ def generation_all(
     path = export_mesh(mesh, save_folder, textured=False)
     model_viewer_html = build_model_viewer_html(save_folder, height=596, width=700)
 
-    textured_mesh = texgen_worker(mesh, image)
+    textured_mesh = get_texgen_worker()(mesh, image)
     path_textured = export_mesh(textured_mesh, save_folder, textured=True)
     model_viewer_html_textured = build_model_viewer_html(save_folder, height=596, width=700, textured=True)
 
@@ -327,6 +330,72 @@ def build_app():
     return demo
 
 
+# Global variables to store model instances
+rmbg_worker = None
+i23d_worker = None
+texgen_worker = None
+t2i_worker = None
+floater_remove_worker = None
+degenerate_face_remove_worker = None
+face_reduce_worker = None
+
+def get_rmbg_worker():
+    global rmbg_worker
+    if rmbg_worker is None:
+        from hy3dgen.rembg import BackgroundRemover
+        rmbg_worker = BackgroundRemover()
+    return rmbg_worker
+
+def get_i23d_worker():
+    global i23d_worker
+    if i23d_worker is None:
+        torch.cuda.empty_cache()  # Clear CUDA cache before loading
+        from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+        i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+            'tencent/Hunyuan3D-2',
+            torch_dtype=torch.float16,
+            device_map="auto"
+        )
+    return i23d_worker
+
+def get_texgen_worker():
+    global texgen_worker
+    if texgen_worker is None:
+        torch.cuda.empty_cache()  # Clear CUDA cache before loading
+        from hy3dgen.texgen import Hunyuan3DPaintPipeline
+        texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
+    return texgen_worker
+
+def get_t2i_worker():
+    global t2i_worker
+    if t2i_worker is None and args.enable_t23d:
+        torch.cuda.empty_cache()  # Clear CUDA cache before loading
+        from hy3dgen.text2image import HunyuanDiTPipeline
+        t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
+    return t2i_worker
+
+def get_floater_remover():
+    global floater_remove_worker
+    if floater_remove_worker is None:
+        from hy3dgen.shapegen import FloaterRemover
+        floater_remove_worker = FloaterRemover()
+    return floater_remove_worker
+
+def get_degenerate_face_remover():
+    global degenerate_face_remove_worker
+    if degenerate_face_remove_worker is None:
+        from hy3dgen.shapegen import DegenerateFaceRemover
+        degenerate_face_remove_worker = DegenerateFaceRemover()
+    return degenerate_face_remove_worker
+
+def get_face_reducer():
+    global face_reduce_worker
+    if face_reduce_worker is None:
+        from hy3dgen.shapegen import FaceReducer
+        face_reduce_worker = FaceReducer()
+    return face_reduce_worker
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -354,42 +423,20 @@ if __name__ == '__main__':
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
 
-    try:
-        from hy3dgen.texgen import Hunyuan3DPaintPipeline
+    HAS_TEXTUREGEN = True
+    HAS_T2I = args.enable_t23d
 
-        texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
-        HAS_TEXTUREGEN = True
-    except Exception as e:
-        print(e)
-        print("Failed to load texture generator.")
-        print('Please try to install requirements by following README.md')
-        HAS_TEXTUREGEN = False
+    demo = build_app()
 
-    HAS_T2I = False
-    if args.enable_t23d:
-        from hy3dgen.text2image import HunyuanDiTPipeline
-
-        t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
-        HAS_T2I = True
-
-    from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, \
-        Hunyuan3DDiTFlowMatchingPipeline
-    from hy3dgen.rembg import BackgroundRemover
-
-    rmbg_worker = BackgroundRemover()
-    i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
-    floater_remove_worker = FloaterRemover()
-    degenerate_face_remove_worker = DegenerateFaceRemover()
-    face_reduce_worker = FaceReducer()
-
-    # https://discuss.huggingface.co/t/how-to-serve-an-html-file/33921/2
-    # create a FastAPI app
+    # Set up FastAPI with static file serving
     app = FastAPI()
-    # create a static directory to store the static files
     static_dir = Path(SAVE_DIR).absolute()
     static_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
-
-    demo = build_app()
+    
+    # Mount Gradio app to FastAPI
     app = gr.mount_gradio_app(app, demo, path="/")
+    
+    # Run with uvicorn
+    import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)

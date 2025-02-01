@@ -4,8 +4,11 @@ import time
 from glob import glob
 from pathlib import Path
 
-import gradio as gr
 import torch
+torch.cuda.empty_cache()
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
+import gradio as gr
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -102,7 +105,7 @@ def _gen_shape(
     if image is None:
         start_time = time.time()
         try:
-            image = t2i_worker(caption)
+            image = get_t2i_worker()(caption)
         except Exception as e:
             raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
         time_meta['text2image'] = time.time() - start_time
@@ -112,7 +115,7 @@ def _gen_shape(
     print(image.mode)
     if check_box_rembg or image.mode == "RGB":
         start_time = time.time()
-        image = rmbg_worker(image.convert('RGB'))
+        image = get_rmbg_worker()(image.convert('RGB'))
         time_meta['rembg'] = time.time() - start_time
 
     image.save(os.path.join(save_folder, 'rembg.png'))
@@ -122,7 +125,7 @@ def _gen_shape(
 
     generator = torch.Generator()
     generator = generator.manual_seed(int(seed))
-    mesh = i23d_worker(
+    mesh = get_i23d_worker()(
         image=image,
         num_inference_steps=steps,
         guidance_scale=guidance_scale,
@@ -130,9 +133,9 @@ def _gen_shape(
         octree_resolution=octree_resolution
     )[0]
 
-    mesh = FloaterRemover()(mesh)
-    mesh = DegenerateFaceRemover()(mesh)
-    mesh = FaceReducer()(mesh)
+    mesh = get_floater_remover()(mesh)
+    mesh = get_degenerate_face_remover()(mesh)
+    mesh = get_face_reducer()(mesh)
 
     stats['number_of_faces'] = mesh.faces.shape[0]
     stats['number_of_vertices'] = mesh.vertices.shape[0]
@@ -164,7 +167,7 @@ def generation_all(
     path = export_mesh(mesh, save_folder, textured=False)
     model_viewer_html = build_model_viewer_html(save_folder, height=596, width=700)
 
-    textured_mesh = texgen_worker(mesh, image)
+    textured_mesh = get_texgen_worker()(mesh, image)
     path_textured = export_mesh(textured_mesh, save_folder, textured=True)
     model_viewer_html_textured = build_model_viewer_html(save_folder, height=596, width=700, textured=True)
 
@@ -204,10 +207,22 @@ def shape_generation(
     )
 
 
+def generate_image(caption):
+    """Generate image from text using the text-to-image model"""
+    if not HAS_T2I:
+        raise gr.Error("Text to Image is disabled. Please enable it by `python gradio_app.py --enable_t23d`.")
+    
+    t2i_worker = get_t2i_worker()
+    if t2i_worker is None:
+        raise gr.Error("Text to Image model failed to load.")
+        
+    image = t2i_worker(caption)
+    return image
+
+
 def build_app():
     title_html = """
     <div style="font-size: 2em; font-weight: bold; text-align: center; margin-bottom: 5px">
-
     Hunyuan3D-2: Scaling Diffusion Models for High Resolution Textured 3D Assets Generation
     </div>
     <div align="center">
@@ -226,26 +241,29 @@ def build_app():
 
         with gr.Row():
             with gr.Column(scale=2):
-                with gr.Tabs() as tabs_prompt:
-                    with gr.Tab('Image Prompt', id='tab_img_prompt') as tab_ip:
-                        image = gr.Image(label='Image', type='pil', image_mode='RGBA', height=290)
-                        with gr.Row():
-                            check_box_rembg = gr.Checkbox(value=True, label='Remove Background')
-
-                    with gr.Tab('Text Prompt', id='tab_txt_prompt', visible=HAS_T2I) as tab_tp:
-                        caption = gr.Textbox(label='Text Prompt',
-                                             placeholder='HunyuanDiT will be used to generate image.',
-                                             info='Example: A 3D model of a cute cat, white background')
+                with gr.Group():
+                    caption = gr.Textbox(
+                        label='Text Prompt',
+                        placeholder='Describe what you want to generate',
+                        info='Example: A 3D model of a cute cat, white background',
+                        value="A red apple"
+                    )
+                    
+                    with gr.Row():
+                        gen_img_btn = gr.Button("1. Generate Image", variant='primary')
+                    
+                    image = gr.Image(label='Generated/Input Image', type='pil', image_mode='RGBA')
+                    
+                    with gr.Row():
+                        gen_shape_btn = gr.Button("2a. Generate Shape Only", variant='primary')
+                        gen_all_btn = gr.Button("2b. Generate Shape & Texture", variant='primary', visible=HAS_TEXTUREGEN)
 
                 with gr.Accordion('Advanced Options', open=False):
                     num_steps = gr.Slider(maximum=50, minimum=20, value=30, step=1, label='Inference Steps')
                     octree_resolution = gr.Dropdown([256, 384, 512], value=256, label='Octree Resolution')
                     cfg_scale = gr.Number(value=5.5, label='Guidance Scale')
                     seed = gr.Slider(maximum=1e7, minimum=0, value=1234, label='Seed')
-
-                with gr.Group():
-                    btn = gr.Button(value='Generate Shape Only', variant='primary')
-                    btn_all = gr.Button(value='Generate Shape and Texture', variant='primary', visible=HAS_TEXTUREGEN)
+                    check_box_rembg = gr.Checkbox(value=True, label='Remove Background')
 
                 with gr.Group():
                     file_out = gr.File(label="File", visible=False)
@@ -274,7 +292,7 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Texture synthesis is disable due to missing requirements,
+                Texture synthesis is disabled due to missing requirements,
                  please install requirements following README.md to activate it.
             </div>
             """)
@@ -282,15 +300,19 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Text to 3D is disable. To activate it, please run `python gradio_app.py --enable_t23d`.
+                Text to 3D is disabled. To activate it, please run `python gradio_app.py --enable_t23d`.
             </div>
             """)
 
-        tab_gi.select(fn=lambda: gr.update(selected='tab_img_prompt'), outputs=tabs_prompt)
-        if HAS_T2I:
-            tab_gt.select(fn=lambda: gr.update(selected='tab_txt_prompt'), outputs=tabs_prompt)
+        # Image generation events
+        gen_img_btn.click(
+            fn=generate_image,
+            inputs=[caption],
+            outputs=[image]
+        )
 
-        btn.click(
+        # 3D generation events
+        gen_shape_btn.click(
             shape_generation,
             inputs=[
                 caption,
@@ -307,7 +329,7 @@ def build_app():
             outputs=[file_out],
         )
 
-        btn_all.click(
+        gen_all_btn.click(
             generation_all,
             inputs=[
                 caption,
@@ -325,6 +347,72 @@ def build_app():
         )
 
     return demo
+
+
+# Global variables to store model instances
+rmbg_worker = None
+i23d_worker = None
+texgen_worker = None
+t2i_worker = None
+floater_remove_worker = None
+degenerate_face_remove_worker = None
+face_reduce_worker = None
+
+def get_rmbg_worker():
+    global rmbg_worker
+    if rmbg_worker is None:
+        from hy3dgen.rembg import BackgroundRemover
+        rmbg_worker = BackgroundRemover()
+    return rmbg_worker
+
+def get_i23d_worker():
+    global i23d_worker
+    if i23d_worker is None:
+        torch.cuda.empty_cache()  # Clear CUDA cache before loading
+        from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
+        i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+            'tencent/Hunyuan3D-2',
+            torch_dtype=torch.float16,
+            device_map="auto"
+        )
+    return i23d_worker
+
+def get_texgen_worker():
+    global texgen_worker
+    if texgen_worker is None:
+        torch.cuda.empty_cache()  # Clear CUDA cache before loading
+        from hy3dgen.texgen import Hunyuan3DPaintPipeline
+        texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
+    return texgen_worker
+
+def get_t2i_worker():
+    global t2i_worker
+    if t2i_worker is None and args.enable_t23d:
+        torch.cuda.empty_cache()  # Clear CUDA cache before loading
+        from hy3dgen.text2image import HunyuanDiTPipeline
+        t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
+    return t2i_worker
+
+def get_floater_remover():
+    global floater_remove_worker
+    if floater_remove_worker is None:
+        from hy3dgen.shapegen import FloaterRemover
+        floater_remove_worker = FloaterRemover()
+    return floater_remove_worker
+
+def get_degenerate_face_remover():
+    global degenerate_face_remove_worker
+    if degenerate_face_remove_worker is None:
+        from hy3dgen.shapegen import DegenerateFaceRemover
+        degenerate_face_remove_worker = DegenerateFaceRemover()
+    return degenerate_face_remove_worker
+
+def get_face_reducer():
+    global face_reduce_worker
+    if face_reduce_worker is None:
+        from hy3dgen.shapegen import FaceReducer
+        face_reduce_worker = FaceReducer()
+    return face_reduce_worker
 
 
 if __name__ == '__main__':
@@ -354,42 +442,20 @@ if __name__ == '__main__':
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
 
-    try:
-        from hy3dgen.texgen import Hunyuan3DPaintPipeline
+    HAS_TEXTUREGEN = True
+    HAS_T2I = args.enable_t23d
 
-        texgen_worker = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
-        HAS_TEXTUREGEN = True
-    except Exception as e:
-        print(e)
-        print("Failed to load texture generator.")
-        print('Please try to install requirements by following README.md')
-        HAS_TEXTUREGEN = False
+    demo = build_app()
 
-    HAS_T2I = False
-    if args.enable_t23d:
-        from hy3dgen.text2image import HunyuanDiTPipeline
-
-        t2i_worker = HunyuanDiTPipeline('Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled')
-        HAS_T2I = True
-
-    from hy3dgen.shapegen import FaceReducer, FloaterRemover, DegenerateFaceRemover, \
-        Hunyuan3DDiTFlowMatchingPipeline
-    from hy3dgen.rembg import BackgroundRemover
-
-    rmbg_worker = BackgroundRemover()
-    i23d_worker = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
-    floater_remove_worker = FloaterRemover()
-    degenerate_face_remove_worker = DegenerateFaceRemover()
-    face_reduce_worker = FaceReducer()
-
-    # https://discuss.huggingface.co/t/how-to-serve-an-html-file/33921/2
-    # create a FastAPI app
+    # Set up FastAPI with static file serving
     app = FastAPI()
-    # create a static directory to store the static files
     static_dir = Path(SAVE_DIR).absolute()
     static_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
-
-    demo = build_app()
+    
+    # Mount Gradio app to FastAPI
     app = gr.mount_gradio_app(app, demo, path="/")
+    
+    # Run with uvicorn
+    import uvicorn
     uvicorn.run(app, host=args.host, port=args.port)

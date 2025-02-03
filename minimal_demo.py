@@ -73,6 +73,30 @@ def text_to_3d(prompt='a car'):
     mesh.export('t2i_demo.glb')
 
 
+def image_to_3d_fast(image_path='assets/demo.png'):
+    rembg = BackgroundRemover()
+    model_path = 'tencent/Hunyuan3D-2'
+
+    image = Image.open(image_path)
+
+    if image.mode == 'RGB':
+        image = rembg(image)
+
+    pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
+        model_path,
+        subfolder='hunyuan3d-dit-v2-0-fast',
+        variant='fp16'
+    )
+
+    mesh = pipeline(image=image, num_inference_steps=30, mc_algo='mc',
+                    generator=torch.manual_seed(2025))[0]
+    mesh = FloaterRemover()(mesh)
+    mesh = DegenerateFaceRemover()(mesh)
+    mesh = FaceReducer()(mesh)
+    mesh.export('mesh.glb')
+
+
 if __name__ == '__main__':
-    image_to_3d()
+    image_to_3d_fast()
+    # image_to_3d()
     # text_to_3d()

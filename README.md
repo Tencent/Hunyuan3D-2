@@ -25,10 +25,6 @@
 
 <br>
 
-> From Hunyuan3D Team: Happy New Year!
-
-![happynewyear](https://github.com/user-attachments/assets/69aa40a7-8657-4c2b-8efd-99eda6c26fe4)
-
 
 > Join our **[Wechat](#)** and **[Discord](https://discord.gg/GuaWYwzKbX)** group to discuss and find help from us.
 
@@ -44,12 +40,18 @@
 
 ## 🔥 News
 
+- Feb 3, 2025: 🐎
+  Release [Hunyuan3D-DiT-v2-0-Fast](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast), our
+  guidance distillation model that could half the dit inference time, see [here](minimal_demo.py) for usage.
 - Jan 27, 2025: 🛠️ Release Blender addon for Hunyuan3D 2.0, Check it out [here](#blender-addon).
-- Jan 23, 2025: 💬 We thank community members for creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper) and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other awesome [extensions](#community-resources).
+- Jan 23, 2025: 💬 We thank community members for
+  creating [Windows installation tool](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI support
+  with [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
+  and [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) and other
+  awesome [extensions](#community-resources).
 - Jan 21, 2025: 💬 Enjoy exciting 3D generation on our website [Hunyuan3D Studio](https://3d.hunyuan.tencent.com)!
 - Jan 21, 2025: 🤗 Release inference code and pretrained models
-  of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2).
-- Jan 21, 2025: 🤗 Release Hunyuan3D 2.0. Please give it a try
+  of [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2). Please give it a try
   via [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) and
   our [official site](https://3d.hunyuan.tencent.com)!
 
@@ -103,6 +105,7 @@ and the condition following ability.
 
 Generation results of Hunyuan3D 2.0:
 <p align="left">
+ <img src="https://github.com/user-attachments/assets/69aa40a7-8657-4c2b-8efd-99eda6c26fe4"  height=250>
   <img src="assets/images/e2e-1.gif"  height=250>
   <img src="assets/images/e2e-2.gif"  height=250>
 </p>
@@ -185,12 +188,15 @@ python3 gradio_app.py
 
 ### API Server
 
-You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh, and e.t.c.
+You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh,
+and e.t.c.
 
 ```bash
 python api_server.py --host 0.0.0.0 --port 8080
 ```
+
 A demo post request for image to 3D without texture.
+
 ```bash
 img_b64_str=$(base64 -i assets/demo.png)
 curl -X POST "http://localhost:8080/generate" \
@@ -203,18 +209,14 @@ curl -X POST "http://localhost:8080/generate" \
 
 ### Blender Addon
 
-With an API server launched, you could also directly use Hunyuan3D 2.0 in your blender with our [Blender Addon](blender_addon.py). Please follow our tutorial to install and use.
-
+With an API server launched, you could also directly use Hunyuan3D 2.0 in your blender with
+our [Blender Addon](blender_addon.py). Please follow our tutorial to install and use.
 
 https://github.com/user-attachments/assets/8230bfb5-32b1-4e48-91f4-a977c54a4f3e
-
-
-
 
 ### Official Site
 
 Don't forget to visit [Hunyuan3D](https://3d.hunyuan.tencent.com) for quick use, if you don't want to host yourself.
-
 
 ## 📑 Open-Source Plan
 
@@ -252,12 +254,11 @@ If you found this repository helpful, please cite our reports:
 
 Thanks for the contributions of community members, here we have these great extensions of Hunyuan3D 2.0:
 
-- [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) 
+- [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack)
 - [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
 - [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
 - [📦 A bundle for running on Windows | 整合包](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable)
 - [Hunyuan3D-2GP](https://github.com/deepbeepmeep/Hunyuan3D-2GP)
-
 
 ## Acknowledgements
 

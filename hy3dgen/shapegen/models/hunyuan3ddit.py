@@ -287,6 +287,7 @@ class Hunyuan3DDiT(nn.Module):
         theta: int = 10_000,
         qkv_bias: bool = True,
         time_factor: float = 1000,
+        guidance_embed: bool = False,
         ckpt_path: Optional[str] = None,
         **kwargs,
     ):
@@ -303,6 +304,7 @@ class Hunyuan3DDiT(nn.Module):
         self.qkv_bias = qkv_bias
         self.time_factor = time_factor
         self.out_channels = self.in_channels
+        self.guidance_embed = guidance_embed
 
         if hidden_size % num_heads != 0:
             raise ValueError(
@@ -316,6 +318,9 @@ class Hunyuan3DDiT(nn.Module):
         self.latent_in = nn.Linear(self.in_channels, self.hidden_size, bias=True)
         self.time_in = MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size)
         self.cond_in = nn.Linear(context_in_dim, self.hidden_size)
+        self.guidance_in = (
+            MLPEmbedder(in_dim=256, hidden_dim=self.hidden_size) if guidance_embed else nn.Identity()
+        )
 
         self.double_blocks = nn.ModuleList(
             [
@@ -374,7 +379,14 @@ class Hunyuan3DDiT(nn.Module):
     ) -> Tensor:
         cond = contexts['main']
         latent = self.latent_in(x)
+
         vec = self.time_in(timestep_embedding(t, 256, self.time_factor).to(dtype=latent.dtype))
+        if self.guidance_embed:
+            guidance = kwargs.get('guidance', None)
+            if guidance is None:
+                raise ValueError("Didn't get guidance strength for guidance distilled model.")
+            vec = vec + self.guidance_in(timestep_embedding(guidance, 256, self.time_factor))
+
         cond = self.cond_in(cond)
         pe = None
 

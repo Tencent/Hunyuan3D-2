@@ -10,7 +10,6 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from mmgp import offload
 
 def get_example_img_list():
     print('Loading example img list ...')
@@ -34,7 +33,7 @@ def gen_save_folder(max_size=60):
         print(f"remove {SAVE_DIR}/{(cur_id + 1) % max_size} success !!!")
     save_folder = f"{SAVE_DIR}/{max(0, cur_id)}"
     os.makedirs(save_folder, exist_ok=True)
-    print(f"mkdir {save_folder} suceess !!!")
+    print(f"mkdir {save_folder} success !!!")
     return save_folder
 
 
@@ -106,7 +105,7 @@ def _gen_shape(
         try:
             image = t2i_worker(caption)
         except Exception as e:
-            raise gr.Error(f"Text to 3D is disable. Please enable it by `python gradio_app.py --enable_t23d`.")
+            raise gr.Error(f"Text to 3D is disabled. Please enable it by restarted the app with `python gradio_app.py --enable_t23d`.")
         time_meta['text2image'] = time.time() - start_time
 
     image.save(os.path.join(save_folder, 'input.png'))
@@ -245,10 +244,10 @@ def build_app():
                                              info='Example: A 3D model of a cute cat, white background')
 
                 with gr.Accordion('Advanced Options', open=False):
-                    num_steps = gr.Slider(maximum=100, minimum=20, value=30, step=1, label='Inference Steps')
+                    num_steps = gr.Slider(maximum=100, minimum=1, value=30, step=1, label='Inference Steps')
                     octree_resolution = gr.Dropdown([256, 384, 512, 768, 1024], value=256, label='Octree Resolution')
                     cfg_scale = gr.Number(value=5.5, label='Guidance Scale')
-                    max_facenum_slider = gr.Slider(maximum=150000, minimum=20000, value=40000, step=1000, label='Faces')
+                    max_facenum_slider = gr.Slider(maximum=200000, minimum=20000, value=40000, step=1000, label='Number of Faces')
                     seed = gr.Slider(maximum=1e7, minimum=0, value=1234, label='Seed')
 
                 with gr.Group():
@@ -282,15 +281,15 @@ def build_app():
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Texture synthesis is disable due to missing requirements,
-                 please install requirements following README.md to activate it.
+                Texture synthesis is disabled due to missing requirements,
+                 please refer to the README.md and install the missing requirements to activate it.
             </div>
             """)
         if not args.enable_t23d:
             gr.HTML("""
             <div style="margin-top: 20px;">
                 <b>Warning: </b>
-                Text to 3D is disable. To activate it, please run `python gradio_app.py --enable_t23d`.
+                Text to 3D is disabled. Please enable it by restarted the app with `python gradio_app.py --enable_t23d`.
             </div>
             """)
 
@@ -345,9 +344,6 @@ if __name__ == '__main__':
     parser.add_argument('--host', type=str, default='0.0.0.0')
     parser.add_argument('--cache-path', type=str, default='gradio_cache')
     parser.add_argument('--enable_t23d', action='store_true')
-    parser.add_argument('--profile', type=str, default="4")
-    parser.add_argument('--verbose', type=str, default="1")
-
     args = parser.parse_args()
 
     SAVE_DIR = args.cache_path
@@ -367,7 +363,6 @@ if __name__ == '__main__':
     example_is = get_example_img_list()
     example_ts = get_example_txt_list()
 
-    torch.set_default_device("cpu")
     try:
         from hy3dgen.texgen import Hunyuan3DPaintPipeline
 

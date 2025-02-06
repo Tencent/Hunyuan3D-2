@@ -135,7 +135,7 @@ class FaceReducer:
     def __call__(
         self,
         mesh: Union[pymeshlab.MeshSet, trimesh.Trimesh, Latent2MeshOutput, str],
-        max_facenum: int = 40000
+        max_facenum: int = 150000
     ) -> Union[pymeshlab.MeshSet, trimesh.Trimesh]:
         ms = import_mesh(mesh)
         ms = reduce_face(ms, max_facenum=max_facenum)

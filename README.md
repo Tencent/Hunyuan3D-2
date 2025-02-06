@@ -113,7 +113,7 @@ Generation results of Hunyuan3D 2.0:
 
 It takes 11.5 GB VRAM for shape generation and 24.5 GB for shape and texture generation in total.
 
-| Model                   |                             | Date       | Size | Huggingface                                                                              |
+| Model                   |    Description                         | Date       | Size | Huggingface                                                                              |
 |-------------------------|-----------------------------|------------|------|------------------------------------------------------------------------------------------| 
 | Hunyuan3D-DiT-v2-0-Fast | Guidance Distillation Model | 2025-02-03 | 2.6B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast) |
 | Hunyuan3D-DiT-v2-0      | Image to Shape Model        | 2025-01-21 | 2.6B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0)      |

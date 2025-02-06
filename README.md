@@ -105,12 +105,11 @@ and the condition following ability.
 
 Generation results of Hunyuan3D 2.0:
 <p align="left">
- <img src="https://github.com/user-attachments/assets/69aa40a7-8657-4c2b-8efd-99eda6c26fe4"  height=250>
   <img src="assets/images/e2e-1.gif"  height=250>
   <img src="assets/images/e2e-2.gif"  height=250>
 </p>
 
-### Pretrained Models
+## 🎁 Models Zoo
 
 It takes 11.5 GB VRAM for shape generation and 24.5 GB for shape and texture generation in total.
 

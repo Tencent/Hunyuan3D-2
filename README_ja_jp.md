@@ -30,6 +30,7 @@
 
 ## 🔥 ニュース
 
+- 2025年2月14日: 🛠️ テクスチャ強化モジュールをリリースしました。HD テクスチャ生成を [体験](minimal_demo.py) してください。
 - 2025年1月21日: 💬 私たちのウェブサイト [Hunyuan3D Studio](https://3d.hunyuan.tencent.com) でエキサイティングな3D生成を楽しんでください！
 - 2025年1月21日: 💬 [Hunyuan3D 2.0](https://huggingface.co/tencent/Hunyuan3D-2) の推論コードと事前学習モデルをリリースしました。
 - 2025年1月21日: 💬 Hunyuan3D 2.0をリリースしました。 [huggingface space](https://huggingface.co/spaces/tencent/Hunyuan3D-2) や [公式サイト](https://3d.hunyuan.tencent.com) でお試しください！

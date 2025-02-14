@@ -1,0 +1,42 @@
+name: Push to Replicate
+
+on:
+  # Allows manual triggering from GitHub.com
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: "Model name to push (default: ndreca/hunyuan3d-2)"
+        required: false
+        default: "ndreca/hunyuan3d-2"
+  # Uncomment the lines below to trigger on every push to main
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  push_to_replicate:
+    name: Push to Replicate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          docker-images: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Cog
+        uses: replicate/setup-cog@v2
+        with:
+          token: ${{ secrets.REPLICATE_API_TOKEN }}
+
+      - name: Push to Replicate
+        run: |
+          if [ -n "${{ github.event.inputs.model_name }}" ]; then
+            cog push r8.im/${{ github.event.inputs.model_name }} --separate-weights
+          else
+            cog push
+          fi

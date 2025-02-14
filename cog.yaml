@@ -1,0 +1,36 @@
+build:
+  gpu: true
+  cuda: "12.4"
+  python_version: "3.10"
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libglib2.0-0"
+    - "libglu1-mesa"
+    - "libglew2.2"
+  python_packages:
+    - ninja
+    - pybind11
+    - diffusers
+    - einops
+    - opencv-python
+    - numpy
+    - torch
+    - transformers
+    - torchvision
+    - omegaconf
+    - tqdm
+    - trimesh
+    - pymeshlab
+    - pygltflib
+    - xatlas
+    - accelerate
+    - gradio
+    - fastapi
+    - uvicorn
+    - rembg
+    - onnxruntime
+
+  run:
+    - curl -o /tmp/custom_rasterizer-0.1-cp310-cp310-linux_x86_64.whl -L "https://huggingface.co/spaces/tencent/Hunyuan3D-2/resolve/main/custom_rasterizer-0.1-cp310-cp310-linux_x86_64.whl" && pip install /tmp/custom_rasterizer-0.1-cp310-cp310-linux_x86_64.whl
+
+predict: "predict.py:Predictor"

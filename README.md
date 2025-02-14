@@ -1,10 +1,12 @@
-[中文阅读](README_zh_cn.md)
-[日本語で読む](README_ja_jp.md)
+# tencent/Hunyuan3D-2 Cog model
 
-<p align="center"> 
-  <img src="./assets/images/teaser.jpg">
+This is an implementation of [tencent/Hunyuan3D-2](https://huggingface.co/spaces/tencent/Hunyuan3D-2) as a Cog model. [Cog packages machine learning models as standard containers.](https://github.com/replicate/cog)
 
-</p>
+Run a prediction:
+
+    cog predict -i image=@assets/demo.png
+
+![demo](/assets/demo.png)
 
 <div align="center">
   <a href=https://3d.hunyuan.tencent.com target="_blank"><img src=https://img.shields.io/badge/Official%20Site-333399.svg?logo=homepage height=22px></a>
@@ -26,11 +28,7 @@
 <br>
 
 
-> Join our **[Wechat](#)** and **[Discord](https://discord.gg/GuaWYwzKbX)** group to discuss and find help from us.
-
-| Wechat Group                                     | Xiaohongshu                                           | X                                           | Discord                                           |
-|--------------------------------------------------|-------------------------------------------------------|---------------------------------------------|---------------------------------------------------|
-| <img src="assets/qrcode/wechat.png"  height=140> | <img src="assets/qrcode/xiaohongshu.png"  height=140> | <img src="assets/qrcode/x.png"  height=140> | <img src="assets/qrcode/discord.png"  height=140> |        
+> Join our **[Discord](https://discord.gg/GuaWYwzKbX)** group to discuss and find help from us.
 
 ---
 
@@ -73,11 +71,6 @@ including the open-source models and closed-source models in geometry details, c
 e.t.c.
 
 
-
-<p align="center">
-  <img src="assets/images/system.jpg">
-</p>
-
 ## ☯️ **Hunyuan3D 2.0**
 
 ### Architecture
@@ -85,10 +78,6 @@ e.t.c.
 Hunyuan3D 2.0 features a two-stage generation pipeline, starting with the creation of a bare mesh, followed by the
 synthesis of a texture map for that mesh. This strategy is effective for decoupling the difficulties of shape and
 texture generation and also provides flexibility for texturing either generated or handcrafted meshes.
-
-<p align="left">
-  <img src="assets/images/arch.jpg">
-</p>
 
 ### Performance
 
@@ -104,12 +93,6 @@ and the condition following ability.
 | Top Close-source Model3 | 3.218     | 51.574      | 295.691     | 0.799         |
 | Hunyuan3D 2.0           | **3.193** | **49.165**  | **282.429** | **0.809**     |
 
-Generation results of Hunyuan3D 2.0:
-<p align="left">
-  <img src="assets/images/e2e-1.gif"  height=250>
-  <img src="assets/images/e2e-2.gif"  height=250>
-</p>
-
 ## 🎁 Models Zoo
 
 It takes 11.5 GB VRAM for shape generation and 24.5 GB for shape and texture generation in total.
@@ -121,111 +104,10 @@ It takes 11.5 GB VRAM for shape generation and 24.5 GB for shape and texture gen
 | Hunyuan3D-Paint-v2-0    | Texture Generation Model    | 2025-01-21 | 1.3B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-paint-v2-0)    |
 | Hunyuan3D-Delight-v2-0  | Image Delight Model         | 2025-01-21 | 1.3B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-delight-v2-0)  | 
 
-## 🤗 Get Started with Hunyuan3D 2.0
-
-You may follow the next steps to use Hunyuan3D 2.0 via:
-
-- [Code](#code-usage)
-- [Gradio App](#gradio-app)
-- [API Server](#api-server)
-- [Blender Addon](#blender-addon)
-- [Official Site](#official-site)
-
-### Install Requirements
-
-Please install Pytorch via the [official](https://pytorch.org/) site. Then install the other requirements via
-
-```bash
-pip install -r requirements.txt
-# for texture
-cd hy3dgen/texgen/custom_rasterizer
-python3 setup.py install
-cd ../../..
-cd hy3dgen/texgen/differentiable_renderer
-python3 setup.py install
-```
-
-### Code Usage
-
-We designed a diffusers-like API to use our shape generation model - Hunyuan3D-DiT and texture synthesis model -
-Hunyuan3D-Paint.
-
-You could assess **Hunyuan3D-DiT** via:
-
-```python
-from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
-
-pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
-mesh = pipeline(image='assets/demo.png')[0]
-```
-
-The output mesh is a [trimesh object](https://trimesh.org/trimesh.html), which you could save to glb/obj (or other
-format) file.
-
-For **Hunyuan3D-Paint**, do the following:
-
-```python
-from hy3dgen.texgen import Hunyuan3DPaintPipeline
-from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline
-
-# let's generate a mesh first
-pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2')
-mesh = pipeline(image='assets/demo.png')[0]
-
-pipeline = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
-mesh = pipeline(mesh, image='assets/demo.png')
-```
-
-Please visit [minimal_demo.py](minimal_demo.py) for more advanced usage, such as **text to 3D** and **texture generation
-for handcrafted mesh**.
-
-### Gradio App
-
-You could also host a [Gradio](https://www.gradio.app/) App in your own computer via:
-
-```bash
-python3 gradio_app.py
-```
-
-### API Server
-
-You could launch an API server locally, which you could post web request for Image/Text to 3D, Texturing existing mesh,
-and e.t.c.
-
-```bash
-python api_server.py --host 0.0.0.0 --port 8080
-```
-
-A demo post request for image to 3D without texture.
-
-```bash
-img_b64_str=$(base64 -i assets/demo.png)
-curl -X POST "http://localhost:8080/generate" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "image": "'"$img_b64_str"'",
-         }' \
-     -o test2.glb
-```
-
-### Blender Addon
-
-With an API server launched, you could also directly use Hunyuan3D 2.0 in your blender with
-our [Blender Addon](blender_addon.py). Please follow our tutorial to install and use.
-
-https://github.com/user-attachments/assets/8230bfb5-32b1-4e48-91f4-a977c54a4f3e
 
 ### Official Site
 
 Don't forget to visit [Hunyuan3D](https://3d.hunyuan.tencent.com) for quick use, if you don't want to host yourself.
-
-## 📑 Open-Source Plan
-
-- [x] Inference Code
-- [x] Model Checkpoints
-- [x] Technical Report
-- [ ] ComfyUI
-- [ ] TensorRT Version
 
 ## 🔗 BibTeX
 
@@ -250,16 +132,6 @@ If you found this repository helpful, please cite our reports:
     primaryClass={cs.CV}
 }
 ```
-
-## Community Resources
-
-Thanks for the contributions of community members, here we have these great extensions of Hunyuan3D 2.0:
-
-- [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack)
-- [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)
-- [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
-- [📦 A bundle for running on Windows | 整合包](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable)
-- [Hunyuan3D-2GP](https://github.com/deepbeepmeep/Hunyuan3D-2GP)
 
 ## Acknowledgements
 

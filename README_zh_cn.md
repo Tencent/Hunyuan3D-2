@@ -44,6 +44,8 @@
 </p>
 
 ## 🔥 最新消息
+
+- Feb 14, 2025: 🛠️ 发布纹理增强模块，欢迎[体验](minimal_demo.py)高清纹理生成.
 - Jan 27, 2025: 🛠️ 发布 Blender 插件，欢迎[体验](#blender-addon).
 - Jan 23, 2025: 💬 感谢社区成员的 [Windows 安装工具](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable), ComfyUI 支持 [ComfyUI-Hunyuan3DWrapper](https://github.com/kijai/ComfyUI-Hunyuan3DWrapper)， [ComfyUI-3D-Pack](https://github.com/MrForExample/ComfyUI-3D-Pack) 以及其他出色的 [扩展功能](#community-resources).
 - Jan 21, 2025: 💬 欢迎来我们的门户网站 [Hunyuan3D Studio](https://3d.hunyuan.tencent.com) 体验更多3D生成功能!

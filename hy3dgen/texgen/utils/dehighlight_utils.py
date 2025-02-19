@@ -44,6 +44,33 @@ class Light_Shadow_Remover():
         pipeline.set_progress_bar_config(disable=True)
 
         self.pipeline = pipeline.to(self.device, torch.float16)
+    
+    def recorrect_rgb(self, src_image, target_image, alpha_channel, scale=0.95):
+        
+        def flat_and_mask(bgr, a):
+            mask = torch.where(a > 0.5, True, False)
+            bgr_flat = bgr.reshape(-1, bgr.shape[-1])
+            mask_flat = mask.reshape(-1)
+            bgr_flat_masked = bgr_flat[mask_flat, :]
+            return bgr_flat_masked
+        
+        src_flat = flat_and_mask(src_image, alpha_channel)
+        target_flat = flat_and_mask(target_image, alpha_channel)
+        corrected_bgr = torch.zeros_like(src_image)
+
+        for i in range(3): 
+            src_mean, src_stddev = torch.mean(src_flat[:, i]), torch.std(src_flat[:, i])
+            target_mean, target_stddev = torch.mean(target_flat[:, i]), torch.std(target_flat[:, i])
+            corrected_bgr[:, :, i] = torch.clamp((src_image[:, :, i] - scale * src_mean) * (target_stddev / src_stddev) + scale * target_mean, 0, 1)
+
+        src_mse = torch.mean((src_image - target_image) ** 2)
+        modify_mse = torch.mean((corrected_bgr - target_image) ** 2)
+        if src_mse < modify_mse:
+            corrected_bgr = torch.cat([src_image, alpha_channel], dim=-1)
+        else: 
+            corrected_bgr = torch.cat([corrected_bgr, alpha_channel], dim=-1)
+
+        return corrected_bgr
 
     @torch.no_grad()
     def __call__(self, image):
@@ -80,5 +107,11 @@ class Light_Shadow_Remover():
             image_guidance_scale=self.cfg_image,
             guidance_scale=self.cfg_text,
         ).images[0]
+
+        image_tensor = torch.tensor(np.array(image)/255.0).to(self.device)
+        rgb_src = image_tensor[:,:,:3]
+        image = self.recorrect_rgb(rgb_src, rgb_target, alpha)
+        image = image[:,:,:3]*image[:,:,3:] + torch.ones_like(image[:,:,:3])*(1.0-image[:,:,3:])
+        image = Image.fromarray((image.cpu().numpy()*255).astype(np.uint8))
 
         return image

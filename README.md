@@ -40,6 +40,7 @@
 
 ## 🔥 News
 
+- Feb 14, 2025: 🛠️ Release texture enhancement module, please obtain high-definition textures via [here](minimal_demo.py)!
 - Feb 3, 2025: 🐎
   Release [Hunyuan3D-DiT-v2-0-Fast](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast), our
   guidance distillation model that could half the dit inference time, see [here](minimal_demo.py) for usage.

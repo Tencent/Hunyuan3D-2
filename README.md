@@ -260,6 +260,7 @@ Thanks for the contributions of community members, here we have these great exte
 - [Hunyuan3D-2-for-windows](https://github.com/sdbds/Hunyuan3D-2-for-windows)
 - [📦 A bundle for running on Windows | 整合包](https://github.com/YanWenKun/Hunyuan3D-2-WinPortable)
 - [Hunyuan3D-2GP](https://github.com/deepbeepmeep/Hunyuan3D-2GP)
+- [Kaggle Notebook](https://github.com/darkon12/Hunyuan3D-2GP_Kaggle)
 
 ## Acknowledgements
 

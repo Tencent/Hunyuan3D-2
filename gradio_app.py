@@ -637,6 +637,7 @@ if __name__ == '__main__':
             from hy3dgen.texgen import Hunyuan3DPaintPipeline
 
             texgen_worker = Hunyuan3DPaintPipeline.from_pretrained(args.texgen_model_path)
+            texgen_worker.enable_model_cpu_offload()
             # Not help much, ignore for now.
             # if args.compile:
             #     texgen_worker.models['delight_model'].pipeline.unet.compile()

@@ -15,17 +15,71 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 8px;
-            border-color: #e5e7eb;
-            border-style: solid;
-            border-width: 1px;
         }
+
+        .modelviewer-panel-button {
+            height: 30px;
+            margin: 4px 4px;
+            padding: 0px 14px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 4px rgba(0, 0, 0, 0.25);
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modelviewer-panel-button.checked {
+            background: #6567C9;
+            color: white;
+        }
+
+        .modelviewer-panel-button:hover {
+            background-color: #e2e6ea;
+        }
+
+        .modelviewer-panel-button-container {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .centered-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
     </style>
 </head>
 
 <body>
 <div class="centered-container">
-    <model-viewer>
+    <div class="centered-container">
+        <div class="column is-mobile is-centered">
+            <model-viewer id="modelviewer" style="height: #height#px; width: #width#px;"
+                          rotation-per-second="10deg"
+                          src="#src#" disable-tap
+                          environment-image="neutral"
+                          camera-target="0m 0m 0m"
+                          camera-orbit="0deg 90deg 12m"
+                          orientation="0deg 0deg 0deg"
+                          shadow-intensity=".9"
+                          ar auto-rotate
+                          camera-controls>
+            </model-viewer>
+        </div>
+
+        <div class="modelviewer-panel-button-container">
+            <div id="appearance-button" class="modelviewer-panel-button small checked" onclick="showTexture()">
+                Appearance
+            </div>
+            <div id="geometry-button" class="modelviewer-panel-button small" onclick="hideTexture()">Geometry</div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -40,8 +94,43 @@
             });
         });
     });
-</script>
 
+    var window_state = {};
+
+    function hideTexture() {
+        let appearanceButton = document.getElementById('appearance-button');
+        let geometryButton = document.getElementById('geometry-button');
+        appearanceButton.classList.remove('checked');
+        geometryButton.classList.add('checked');
+        let modelViewer = document.getElementById('modelviewer');
+        if (modelViewer.model.materials[0].pbrMetallicRoughness.baseColorTexture.texture === null) return;
+        window_state.textures = [];
+        for (let i = 0; i < modelViewer.model.materials.length; i++) {
+            window_state.textures.push(modelViewer.model.materials[i].pbrMetallicRoughness.baseColorTexture.texture);
+        }
+        window_state.exposure = modelViewer.exposure;
+        modelViewer.environmentImage = '/static/env_maps/gradient.jpg';
+        for (let i = 0; i < modelViewer.model.materials.length; i++) {
+            modelViewer.model.materials[i].pbrMetallicRoughness.baseColorTexture.setTexture(null);
+        }
+        modelViewer.exposure = 4;
+    }
+
+    function showTexture() {
+        let appearanceButton = document.getElementById('appearance-button');
+        let geometryButton = document.getElementById('geometry-button');
+        appearanceButton.classList.add('checked');
+        geometryButton.classList.remove('checked');
+        let modelViewer = document.getElementById('modelviewer');
+        if (modelViewer.model.materials[0].pbrMetallicRoughness.baseColorTexture.texture !== null) return;
+        modelViewer.environmentImage = '/static/env_maps/white.jpg';
+        for (let i = 0; i < modelViewer.model.materials.length; i++) {
+            modelViewer.model.materials[i].pbrMetallicRoughness.baseColorTexture.setTexture(window_state.textures[i]);
+        }
+        modelViewer.exposure = window_state.exposure;
+    }
+
+</script>
 </body>
 
 </html>

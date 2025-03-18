@@ -23,6 +23,7 @@
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
 import math
+import os
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
@@ -30,9 +31,17 @@ import torch
 from einops import rearrange
 from torch import Tensor, nn
 
+scaled_dot_product_attention = nn.functional.scaled_dot_product_attention
+if os.environ.get('USE_SAGEATTN', '0') == '1':
+    try:
+        from sageattention import sageattn
+    except ImportError:
+        raise ImportError('Please install the package "sageattention" to use this USE_SAGEATTN.')
+    scaled_dot_product_attention = sageattn
+
 
 def attention(q: Tensor, k: Tensor, v: Tensor, **kwargs) -> Tensor:
-    x = torch.nn.functional.scaled_dot_product_attention(q, k, v)
+    x = scaled_dot_product_attention(q, k, v)
     x = rearrange(x, "B H L D -> B L (H D)")
     return x
 
@@ -59,6 +68,15 @@ def timestep_embedding(t: Tensor, dim, max_period=10000, time_factor: float = 10
     if torch.is_floating_point(t):
         embedding = embedding.to(t)
     return embedding
+
+
+class GELU(nn.Module):
+    def __init__(self, approximate='tanh'):
+        super().__init__()
+        self.approximate = approximate
+
+    def forward(self, x: Tensor) -> Tensor:
+        return nn.functional.gelu(x.contiguous(), approximate=self.approximate)
 
 
 class MLPEmbedder(nn.Module):
@@ -163,7 +181,7 @@ class DoubleStreamBlock(nn.Module):
         self.img_norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         self.img_mlp = nn.Sequential(
             nn.Linear(hidden_size, mlp_hidden_dim, bias=True),
-            nn.GELU(approximate="tanh"),
+            GELU(approximate="tanh"),
             nn.Linear(mlp_hidden_dim, hidden_size, bias=True),
         )
 
@@ -174,7 +192,7 @@ class DoubleStreamBlock(nn.Module):
         self.txt_norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         self.txt_mlp = nn.Sequential(
             nn.Linear(hidden_size, mlp_hidden_dim, bias=True),
-            nn.GELU(approximate="tanh"),
+            GELU(approximate="tanh"),
             nn.Linear(mlp_hidden_dim, hidden_size, bias=True),
         )
 
@@ -240,7 +258,7 @@ class SingleStreamBlock(nn.Module):
         self.hidden_size = hidden_size
         self.pre_norm = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
 
-        self.mlp_act = nn.GELU(approximate="tanh")
+        self.mlp_act = GELU(approximate="tanh")
         self.modulation = Modulation(hidden_size, double=False)
 
     def forward(self, x: Tensor, vec: Tensor, pe: Tensor) -> Tensor:

@@ -22,6 +22,7 @@
 # fine-tuning enabling code and other elements of the foregoing made publicly available
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import transforms
@@ -31,6 +32,26 @@ from transformers import (
     Dinov2Model,
     Dinov2Config,
 )
+
+
+def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
+    """
+    embed_dim: output dimension for each position
+    pos: a list of positions to be encoded: size (M,)
+    out: (M, D)
+    """
+    assert embed_dim % 2 == 0
+    omega = np.arange(embed_dim // 2, dtype=np.float64)
+    omega /= embed_dim / 2.
+    omega = 1. / 10000 ** omega  # (D/2,)
+
+    pos = pos.reshape(-1)  # (M,)
+    out = np.einsum('m,d->md', pos, omega)  # (M, D/2), outer product
+
+    emb_sin = np.sin(out)  # (M, D/2)
+    emb_cos = np.cos(out)  # (M, D/2)
+
+    return np.concatenate([emb_sin, emb_cos], axis=1)
 
 
 class ImageEncoder(nn.Module):
@@ -67,7 +88,7 @@ class ImageEncoder(nn.Module):
             ]
         )
 
-    def forward(self, image, mask=None, value_range=(-1, 1)):
+    def forward(self, image, mask=None, value_range=(-1, 1), **kwargs):
         if value_range is not None:
             low, high = value_range
             image = (image - low) / (high - low)
@@ -110,11 +131,85 @@ class DinoImageEncoder(ImageEncoder):
     std = [0.229, 0.224, 0.225]
 
 
+class DinoImageEncoderMV(DinoImageEncoder):
+    def __init__(
+        self,
+        version=None,
+        config=None,
+        use_cls_token=True,
+        image_size=224,
+        view_num=4,
+        **kwargs,
+    ):
+        super().__init__(version, config, use_cls_token, image_size, **kwargs)
+        self.view_num = view_num
+        self.num_patches = self.num_patches
+        pos = np.arange(self.view_num, dtype=np.float32)
+        view_embedding = torch.from_numpy(
+            get_1d_sincos_pos_embed_from_grid(self.model.config.hidden_size, pos)).float()
+
+        view_embedding = view_embedding.unsqueeze(1).repeat(1, self.num_patches, 1)
+        self.view_embed = view_embedding.unsqueeze(0)
+
+    def forward(self, image, mask=None, value_range=(-1, 1), view_idxs=None):
+        if value_range is not None:
+            low, high = value_range
+            image = (image - low) / (high - low)
+
+        image = image.to(self.model.device, dtype=self.model.dtype)
+
+        bs, num_views, c, h, w = image.shape
+        # TODO: find a better place to set view_num?
+        self.view_num = num_views
+
+        image = image.view(bs * num_views, c, h, w)
+
+        inputs = self.transform(image)
+        outputs = self.model(inputs)
+
+        last_hidden_state = outputs.last_hidden_state
+        last_hidden_state = last_hidden_state.view(
+            bs, num_views, last_hidden_state.shape[-2],
+            last_hidden_state.shape[-1]
+        )
+
+        view_embedding = self.view_embed.to(last_hidden_state.dtype).to(last_hidden_state.device)
+        if view_idxs is not None:
+            assert len(view_idxs) == bs
+            view_embeddings = []
+            for i in range(bs):
+                view_idx = view_idxs[i]
+                assert num_views == len(view_idx)
+                view_embeddings.append(self.view_embed[:, view_idx, ...])
+            view_embedding = torch.cat(view_embeddings, 0).to(last_hidden_state.dtype).to(last_hidden_state.device)
+
+        if num_views != self.view_num:
+            view_embedding = view_embedding[:, :num_views, ...]
+        last_hidden_state = last_hidden_state + view_embedding
+        last_hidden_state = last_hidden_state.view(bs, num_views * last_hidden_state.shape[-2],
+                                                   last_hidden_state.shape[-1])
+        return last_hidden_state
+
+    def unconditional_embedding(self, batch_size):
+        device = next(self.model.parameters()).device
+        dtype = next(self.model.parameters()).dtype
+        zero = torch.zeros(
+            batch_size,
+            self.num_patches * self.view_num,
+            self.model.config.hidden_size,
+            device=device,
+            dtype=dtype,
+        )
+        return zero
+
+
 def build_image_encoder(config):
     if config['type'] == 'CLIPImageEncoder':
         return CLIPImageEncoder(**config['kwargs'])
     elif config['type'] == 'DinoImageEncoder':
         return DinoImageEncoder(**config['kwargs'])
+    elif config['type'] == 'DinoImageEncoderMV':
+        return DinoImageEncoderMV(**config['kwargs'])
     else:
         raise ValueError(f'Unknown image encoder type: {config["type"]}')
 
@@ -152,9 +247,9 @@ class SingleImageEncoder(nn.Module):
         super().__init__()
         self.main_image_encoder = build_image_encoder(main_image_encoder)
 
-    def forward(self, image, mask=None):
+    def forward(self, image, mask=None, **kwargs):
         outputs = {
-            'main': self.main_image_encoder(image, mask=mask),
+            'main': self.main_image_encoder(image, mask=mask, **kwargs),
         }
         return outputs
 

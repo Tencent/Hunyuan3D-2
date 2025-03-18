@@ -23,6 +23,6 @@
 # by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
 
 
+from .autoencoders import ShapeVAE
 from .conditioner import DualImageEncoder, SingleImageEncoder, DinoImageEncoder, CLIPImageEncoder
-from .hunyuan3ddit import Hunyuan3DDiT
-from .vae import ShapeVAE
+from .denoisers import Hunyuan3DDiT

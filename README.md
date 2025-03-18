@@ -25,6 +25,8 @@
 
 <br>
 
+> 🔥🔥🔥 **New**: Release 🤗 [Hunyuan3D-2mv](https://huggingface.co/tencent/Hunyuan3D-2mv) and
+> 🤗[Hunyuan3D-2mini](https://huggingface.co/tencent/Hunyuan3D-2mini).
 
 > Join our **[Wechat](#)** and **[Discord](https://discord.gg/dNBrdrGGMa)** group to discuss and find help from us.
 
@@ -40,7 +42,10 @@
 
 ## 🔥 News
 
-- Feb 14, 2025: 🛠️ Release texture enhancement module, please obtain high-definition textures via [here](minimal_demo.py)!
+- Mar 18, 2025: 🤗 Release multiview shape model [Hunyuan3D-2mv](https://huggingface.co/tencent/Hunyuan3D-2mv) and 0.6B
+  shape model [Hunyuan3D-2mini](https://huggingface.co/tencent/Hunyuan3D-2mini).
+- Feb 14, 2025: 🛠️ Release texture enhancement module, please obtain high-definition textures
+  via [here](minimal_demo.py)!
 - Feb 3, 2025: 🐎
   Release [Hunyuan3D-DiT-v2-0-Fast](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast), our
   guidance distillation model that could half the dit inference time, see [here](minimal_demo.py) for usage.
@@ -112,14 +117,29 @@ Generation results of Hunyuan3D 2.0:
 
 ## 🎁 Models Zoo
 
-It takes 11.5 GB VRAM for shape generation and 24.5 GB for shape and texture generation in total.
+It takes 6 GB VRAM for shape generation and 24.5 GB for shape and texture generation in total.
 
-| Model                   |    Description                         | Date       | Size | Huggingface                                                                              |
-|-------------------------|-----------------------------|------------|------|------------------------------------------------------------------------------------------| 
-| Hunyuan3D-DiT-v2-0-Fast | Guidance Distillation Model | 2025-02-03 | 2.6B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast) |
-| Hunyuan3D-DiT-v2-0      | Image to Shape Model        | 2025-01-21 | 2.6B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0)      |
-| Hunyuan3D-Paint-v2-0    | Texture Generation Model    | 2025-01-21 | 1.3B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-paint-v2-0)    |
-| Hunyuan3D-Delight-v2-0  | Image Delight Model         | 2025-01-21 | 1.3B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-delight-v2-0)  | 
+Hunyuan3D-2mini Series
+
+| Model                    | Description                    | Date       | Size | Huggingface                                                                              |
+|--------------------------|--------------------------------|------------|------|------------------------------------------------------------------------------------------|
+| Hunyuan3D-DiT-v2-mini    | Mini Image to Shape Model      | 2025-03-18 | 0.6B | [Download](https://huggingface.co/tencent/Hunyuan3D-2mini/tree/main/hunyuan3d-dit-v2-mini)      |
+
+Hunyuan3D-2mv Series
+
+| Model                    | Description                    | Date       | Size | Huggingface                                                                              |
+|--------------------------|--------------------------------|------------|------|------------------------------------------------------------------------------------------| 
+| Hunyuan3D-DiT-v2-mv-Fast | Guidance Distillation Version  | 2025-03-18 | 1.1B | [Download](https://huggingface.co/tencent/Hunyuan3D-2mv/tree/main/hunyuan3d-dit-v2-mv-fast) |
+| Hunyuan3D-DiT-v2-mv      | Multiview Image to Shape Model | 2025-03-18 | 1.1B | [Download](https://huggingface.co/tencent/Hunyuan3D-2mv/tree/main/hunyuan3d-dit-v2-mv)      |
+
+Hunyuan3D-2 Series
+
+| Model                    | Description                    | Date       | Size | Huggingface                                                                              |
+|--------------------------|--------------------------------|------------|------|------------------------------------------------------------------------------------------| 
+| Hunyuan3D-DiT-v2-0-Fast  | Guidance Distillation Model    | 2025-02-03 | 1.1B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0-fast) |
+| Hunyuan3D-DiT-v2-0       | Image to Shape Model           | 2025-01-21 | 1.1B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-dit-v2-0)      |
+| Hunyuan3D-Paint-v2-0     | Texture Generation Model       | 2025-01-21 | 1.3B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-paint-v2-0)    |
+| Hunyuan3D-Delight-v2-0   | Image Delight Model            | 2025-01-21 | 1.3B | [Download](https://huggingface.co/tencent/Hunyuan3D-2/tree/main/hunyuan3d-delight-v2-0)  | 
 
 ## 🤗 Get Started with Hunyuan3D 2.0
 
@@ -176,7 +196,7 @@ pipeline = Hunyuan3DPaintPipeline.from_pretrained('tencent/Hunyuan3D-2')
 mesh = pipeline(mesh, image='assets/demo.png')
 ```
 
-Please visit [minimal_demo.py](minimal_demo.py) for more advanced usage, such as **text to 3D** and **texture generation
+Please visit [examples](examples) folder for more advanced usage, such as **multiview image to 3D generation** and **texture generation
 for handcrafted mesh**.
 
 ### Gradio App
@@ -184,7 +204,12 @@ for handcrafted mesh**.
 You could also host a [Gradio](https://www.gradio.app/) App in your own computer via:
 
 ```bash
-python3 gradio_app.py
+# Hunyuan3D-2mini
+python3 gradio_app.py --model_path tencent/Hunyuan3D-2mini --subfolder hunyuan3d-dit-v2-mini --texgen_model_path tencent/Hunyuan3D-2
+# Hunyuan3D-2mv
+python3 gradio_app.py --model_path tencent/Hunyuan3D-2mv --subfolder hunyuan3d-dit-v2-mv --texgen_model_path tencent/Hunyuan3D-2
+# Hunyuan3D-2
+python3 gradio_app.py --model_path tencent/Hunyuan3D-2 --subfolder hunyuan3d-dit-v2-0 --texgen_model_path tencent/Hunyuan3D-2
 ```
 
 ### API Server
@@ -265,7 +290,7 @@ Thanks for the contributions of community members, here we have these great exte
 ## Acknowledgements
 
 We would like to thank the contributors to
-the [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), [CraftsMan3D](https://github.com/wyysf-98/CraftsMan3D),
+the [Trellis](https://github.com/microsoft/TRELLIS),  [DINOv2](https://github.com/facebookresearch/dinov2), [Stable Diffusion](https://github.com/Stability-AI/stablediffusion), [FLUX](https://github.com/black-forest-labs/flux), [diffusers](https://github.com/huggingface/diffusers), [HuggingFace](https://huggingface.co), [CraftsMan3D](https://github.com/wyysf-98/CraftsMan3D),
 and [Michelangelo](https://github.com/NeuralCarver/Michelangelo/tree/main) repositories, for their open research and
 exploration.
 

@@ -8,16 +8,36 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const modelViewers = document.querySelectorAll('model-viewer');
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
             modelViewers.forEach(modelViewer => {
-                modelViewer.addEventListener('load', (event) => {
-                    const [material] = modelViewer.model.materials;
-                    let color = [43, 44, 46, 255];
-                    color = color.map(x => x / 255);
-                    material.pbrMetallicRoughness.setMetallicFactor(0.1); // 完全金属
-                    material.pbrMetallicRoughness.setRoughnessFactor(0.7); // 低粗糙度
-                    material.pbrMetallicRoughness.setBaseColorFactor(color);  // CornflowerBlue in RGB
-                });
+                modelViewer.setAttribute(
+                    "environment-image",
+                    "/static/env_maps/gradient.jpg"
+                );
+                // if (!isSafari) {
+                //     modelViewer.setAttribute(
+                //         "environment-image",
+                //         "/static/env_maps/gradient.jpg"
+                //     );
+                // } else {
+                //     modelViewer.addEventListener('load', (event) => {
+                //         const [material] = modelViewer.model.materials;
+                //         let color = [43, 44, 46, 255];
+                //         color = color.map(x => x / 255);
+                //         material.pbrMetallicRoughness.setMetallicFactor(0.1); // 完全金属
+                //         material.pbrMetallicRoughness.setRoughnessFactor(0.7); // 低粗糙度
+                //         material.pbrMetallicRoughness.setBaseColorFactor(color);  // CornflowerBlue in RGB
+                //     });
+                // }
+                // modelViewer.addEventListener('load', (event) => {
+                //     const [material] = modelViewer.model.materials;
+                //     let color = [43, 44, 46, 255];
+                //     color = color.map(x => x / 255);
+                //     material.pbrMetallicRoughness.setMetallicFactor(0.1); // 完全金属
+                //     material.pbrMetallicRoughness.setRoughnessFactor(0.7); // 低粗糙度
+                //     material.pbrMetallicRoughness.setBaseColorFactor(color);  // CornflowerBlue in RGB
+                // });
             });
         });
     </script>
@@ -42,7 +62,19 @@
 
 <body>
 <div class="centered-container">
-    <model-viewer>
+    <div class="column is-mobile is-centered">
+        <model-viewer id="modelviewer" style="height: #height#px; width: #width#px;"
+                      rotation-per-second="10deg"
+                      src="#src#" disable-tap
+                      environment-image="neutral"
+                      camera-target="0m 0m 0m"
+                      camera-orbit="0deg 90deg 8m"
+                      orientation="0deg 0deg 0deg"
+                      shadow-intensity=".9"
+                      ar auto-rotate
+                      camera-controls>
+        </model-viewer>
+    </div>
 </div>
 </body>
 

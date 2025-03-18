@@ -25,7 +25,6 @@
 import copy
 import importlib
 import inspect
-import logging
 import os
 from typing import List, Optional, Union
 
@@ -37,7 +36,8 @@ from PIL import Image
 from diffusers.utils.torch_utils import randn_tensor
 from tqdm import tqdm
 
-logger = logging.getLogger(__name__)
+from .models.autoencoders import SurfaceExtractors
+from .utils import logger, synchronize_timer, smart_load_model
 
 
 def retrieve_timesteps(
@@ -99,6 +99,7 @@ def retrieve_timesteps(
     return timesteps, num_inference_steps
 
 
+@synchronize_timer('Export to trimesh')
 def export_to_trimesh(mesh_output):
     if isinstance(mesh_output, list):
         outputs = []
@@ -136,6 +137,7 @@ def instantiate_from_config(config, **kwargs):
 
 class Hunyuan3DDiTPipeline:
     @classmethod
+    @synchronize_timer('Hunyuan3DDiTPipeline Model Loading')
     def from_single_file(
         cls,
         ckpt_path,
@@ -168,7 +170,7 @@ class Hunyuan3DDiTPipeline:
                     ckpt[model_name] = {}
                 ckpt[model_name][new_key] = value
         else:
-            ckpt = torch.load(ckpt_path, map_location='cpu')
+            ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
         # load model
         model = instantiate_from_config(config['model'])
         model.load_state_dict(ckpt['model'])
@@ -201,47 +203,31 @@ class Hunyuan3DDiTPipeline:
         model_path,
         device='cuda',
         dtype=torch.float16,
-        use_safetensors=None,
-        variant=None,
+        use_safetensors=True,
+        variant='fp16',
         subfolder='hunyuan3d-dit-v2-0',
         **kwargs,
     ):
-        original_model_path = model_path
-        # try local path
-        base_dir = os.environ.get('HY3DGEN_MODELS', '~/.cache/hy3dgen')
-        model_path = os.path.expanduser(os.path.join(base_dir, model_path, subfolder))
-        print('Try to load model from local path:', model_path)
-        if not os.path.exists(model_path):
-            print('Model path not exists, try to download from huggingface')
-            try:
-                import huggingface_hub
-                # download from huggingface
-                path = huggingface_hub.snapshot_download(repo_id=original_model_path)
-                model_path = os.path.join(path, subfolder)
-            except ImportError:
-                logger.warning(
-                    "You need to install HuggingFace Hub to load models from the hub."
-                )
-                raise RuntimeError(f"Model path {model_path} not found")
-            except Exception as e:
-                raise e
-
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model path {original_model_path} not found")
-
-        extension = 'ckpt' if not use_safetensors else 'safetensors'
-        variant = '' if variant is None else f'.{variant}'
-        ckpt_name = f'model{variant}.{extension}'
-        config_path = os.path.join(model_path, 'config.yaml')
-        ckpt_path = os.path.join(model_path, ckpt_name)
-
+        kwargs['from_pretrained_kwargs'] = dict(
+            model_path=model_path,
+            subfolder=subfolder,
+            use_safetensors=use_safetensors,
+            variant=variant,
+            dtype=dtype,
+            device=device,
+        )
+        config_path, ckpt_path = smart_load_model(
+            model_path,
+            subfolder=subfolder,
+            use_safetensors=use_safetensors,
+            variant=variant
+        )
         return cls.from_single_file(
             ckpt_path,
             config_path,
             device=device,
             dtype=dtype,
             use_safetensors=use_safetensors,
-            variant=variant,
             **kwargs
         )
 
@@ -261,24 +247,30 @@ class Hunyuan3DDiTPipeline:
         self.scheduler = scheduler
         self.conditioner = conditioner
         self.image_processor = image_processor
-
+        self.kwargs = kwargs
         self.to(device, dtype)
 
+    def compile(self):
+        self.vae = torch.compile(self.vae)
+        self.model = torch.compile(self.model)
+        self.conditioner = torch.compile(self.conditioner)
+
     def to(self, device=None, dtype=None):
-        if device is not None:
-            self.device = torch.device(device)
-            self.vae.to(device)
-            self.model.to(device)
-            self.conditioner.to(device)
         if dtype is not None:
             self.dtype = dtype
             self.vae.to(dtype=dtype)
             self.model.to(dtype=dtype)
             self.conditioner.to(dtype=dtype)
+        if device is not None:
+            self.device = torch.device(device)
+            self.vae.to(device)
+            self.model.to(device)
+            self.conditioner.to(device)
 
-    def encode_cond(self, image, mask, do_classifier_free_guidance, dual_guidance):
+    @synchronize_timer('Encode cond')
+    def encode_cond(self, image, additional_cond_inputs, do_classifier_free_guidance, dual_guidance):
         bsz = image.shape[0]
-        cond = self.conditioner(image=image, mask=mask)
+        cond = self.conditioner(image=image, **additional_cond_inputs)
 
         if do_classifier_free_guidance:
             un_cond = self.conditioner.unconditional_embedding(bsz)
@@ -344,25 +336,27 @@ class Hunyuan3DDiTPipeline:
         latents = latents * getattr(self.scheduler, 'init_noise_sigma', 1.0)
         return latents
 
-    def prepare_image(self, image):
+    def prepare_image(self, image) -> dict:
         if isinstance(image, str) and not os.path.exists(image):
             raise FileNotFoundError(f"Couldn't find image at path {image}")
 
         if not isinstance(image, list):
             image = [image]
-        image_pts = []
-        mask_pts = []
-        for img in image:
-            image_pt, mask_pt = self.image_processor(img, return_mask=True)
-            image_pts.append(image_pt)
-            mask_pts.append(mask_pt)
 
-        image_pts = torch.cat(image_pts, dim=0).to(self.device, dtype=self.dtype)
-        if mask_pts[0] is not None:
-            mask_pts = torch.cat(mask_pts, dim=0).to(self.device, dtype=self.dtype)
-        else:
-            mask_pts = None
-        return image_pts, mask_pts
+        outputs = []
+        for img in image:
+            output = self.image_processor(img)
+            outputs.append(output)
+
+        cond_input = {k: [] for k in outputs[0].keys()}
+        for output in outputs:
+            for key, value in output.items():
+                cond_input[key].append(value)
+        for key, value in cond_input.items():
+            if isinstance(value[0], torch.Tensor):
+                cond_input[key] = torch.cat(value, dim=0)
+
+        return cond_input
 
     def get_guidance_scale_embedding(self, w, embedding_dim=512, dtype=torch.float32):
         """
@@ -392,6 +386,17 @@ class Hunyuan3DDiTPipeline:
         assert emb.shape == (w.shape[0], embedding_dim)
         return emb
 
+    def set_surface_extractor(self, mc_algo):
+        if mc_algo is None:
+            return
+        logger.info('The parameters `mc_algo` is deprecated, and will be removed in future versions.\n'
+                    'Please use: \n'
+                    'from hy3dgen.shapegen.models.autoencoders import SurfaceExtractors\n'
+                    'pipeline.vae.surface_extractor = SurfaceExtractors[mc_algo]() instead\n')
+        if mc_algo not in SurfaceExtractors.keys():
+            raise ValueError(f"Unknown mc_algo {mc_algo}")
+        self.vae.surface_extractor = SurfaceExtractors[mc_algo]()
+
     @torch.no_grad()
     def __call__(
         self,
@@ -408,13 +413,15 @@ class Hunyuan3DDiTPipeline:
         octree_resolution=384,
         mc_level=-1 / 512,
         num_chunks=8000,
-        mc_algo='mc',
+        mc_algo=None,
         output_type: Optional[str] = "trimesh",
         enable_pbar=True,
         **kwargs,
     ) -> List[List[trimesh.Trimesh]]:
         callback = kwargs.pop("callback", None)
         callback_steps = kwargs.pop("callback_steps", None)
+
+        self.set_surface_extractor(mc_algo)
 
         device = self.device
         dtype = self.dtype
@@ -424,7 +431,6 @@ class Hunyuan3DDiTPipeline:
 
         image, mask = self.prepare_image(image)
         cond = self.encode_cond(image=image,
-                                mask=mask,
                                 do_classifier_free_guidance=do_classifier_free_guidance,
                                 dual_guidance=dual_guidance)
         batch_size = image.shape[0]
@@ -438,45 +444,45 @@ class Hunyuan3DDiTPipeline:
 
         guidance_cond = None
         if getattr(self.model, 'guidance_cond_proj_dim', None) is not None:
-            print('Using lcm guidance scale')
+            logger.info('Using lcm guidance scale')
             guidance_scale_tensor = torch.tensor(guidance_scale - 1).repeat(batch_size)
             guidance_cond = self.get_guidance_scale_embedding(
                 guidance_scale_tensor, embedding_dim=self.model.guidance_cond_proj_dim
             ).to(device=device, dtype=latents.dtype)
-
-        for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:", leave=False)):
-            # expand the latents if we are doing classifier free guidance
-            if do_classifier_free_guidance:
-                latent_model_input = torch.cat([latents] * (3 if dual_guidance else 2))
-            else:
-                latent_model_input = latents
-            latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
-
-            # predict the noise residual
-            timestep_tensor = torch.tensor([t], dtype=t_dtype, device=device)
-            timestep_tensor = timestep_tensor.expand(latent_model_input.shape[0])
-            noise_pred = self.model(latent_model_input, timestep_tensor, cond, guidance_cond=guidance_cond)
-
-            # no drop, drop clip, all drop
-            if do_classifier_free_guidance:
-                if dual_guidance:
-                    noise_pred_clip, noise_pred_dino, noise_pred_uncond = noise_pred.chunk(3)
-                    noise_pred = (
-                        noise_pred_uncond
-                        + guidance_scale * (noise_pred_clip - noise_pred_dino)
-                        + dual_guidance_scale * (noise_pred_dino - noise_pred_uncond)
-                    )
+        with synchronize_timer('Diffusion Sampling'):
+            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:", leave=False)):
+                # expand the latents if we are doing classifier free guidance
+                if do_classifier_free_guidance:
+                    latent_model_input = torch.cat([latents] * (3 if dual_guidance else 2))
                 else:
-                    noise_pred_cond, noise_pred_uncond = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+                    latent_model_input = latents
+                latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-            # compute the previous noisy sample x_t -> x_t-1
-            outputs = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
-            latents = outputs.prev_sample
+                # predict the noise residual
+                timestep_tensor = torch.tensor([t], dtype=t_dtype, device=device)
+                timestep_tensor = timestep_tensor.expand(latent_model_input.shape[0])
+                noise_pred = self.model(latent_model_input, timestep_tensor, cond, guidance_cond=guidance_cond)
 
-            if callback is not None and i % callback_steps == 0:
-                step_idx = i // getattr(self.scheduler, "order", 1)
-                callback(step_idx, t, outputs)
+                # no drop, drop clip, all drop
+                if do_classifier_free_guidance:
+                    if dual_guidance:
+                        noise_pred_clip, noise_pred_dino, noise_pred_uncond = noise_pred.chunk(3)
+                        noise_pred = (
+                            noise_pred_uncond
+                            + guidance_scale * (noise_pred_clip - noise_pred_dino)
+                            + dual_guidance_scale * (noise_pred_dino - noise_pred_uncond)
+                        )
+                    else:
+                        noise_pred_cond, noise_pred_uncond = noise_pred.chunk(2)
+                        noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+
+                # compute the previous noisy sample x_t -> x_t-1
+                outputs = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
+                latents = outputs.prev_sample
+
+                if callback is not None and i % callback_steps == 0:
+                    step_idx = i // getattr(self.scheduler, "order", 1)
+                    callback(step_idx, t, outputs)
 
         return self._export(
             latents,
@@ -484,7 +490,17 @@ class Hunyuan3DDiTPipeline:
             box_v, mc_level, num_chunks, octree_resolution, mc_algo,
         )
 
-    def _export(self, latents, output_type, box_v, mc_level, num_chunks, octree_resolution, mc_algo):
+    def _export(
+        self,
+        latents,
+        output_type='trimesh',
+        box_v=1.01,
+        mc_level=0.0,
+        num_chunks=20000,
+        octree_resolution=256,
+        mc_algo='mc',
+        enable_pbar=True
+    ):
         if not output_type == "latent":
             latents = 1. / self.vae.scale_factor * latents
             latents = self.vae(latents)
@@ -495,6 +511,7 @@ class Hunyuan3DDiTPipeline:
                 num_chunks=num_chunks,
                 octree_resolution=octree_resolution,
                 mc_algo=mc_algo,
+                enable_pbar=enable_pbar,
             )
         else:
             outputs = latents
@@ -507,20 +524,20 @@ class Hunyuan3DDiTPipeline:
 
 class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def __call__(
         self,
-        image: Union[str, List[str], Image.Image] = None,
+        image: Union[str, List[str], Image.Image, dict, List[dict]] = None,
         num_inference_steps: int = 50,
         timesteps: List[int] = None,
         sigmas: List[float] = None,
         eta: float = 0.0,
-        guidance_scale: float = 7.5,
+        guidance_scale: float = 5.0,
         generator=None,
         box_v=1.01,
         octree_resolution=384,
         mc_level=0.0,
-        mc_algo='mc',
+        mc_algo=None,
         num_chunks=8000,
         output_type: Optional[str] = "trimesh",
         enable_pbar=True,
@@ -529,6 +546,8 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
         callback = kwargs.pop("callback", None)
         callback_steps = kwargs.pop("callback_steps", None)
 
+        self.set_surface_extractor(mc_algo)
+
         device = self.device
         dtype = self.dtype
         do_classifier_free_guidance = guidance_scale >= 0 and not (
@@ -536,10 +555,11 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
             self.model.guidance_embed is True
         )
 
-        image, mask = self.prepare_image(image)
+        cond_inputs = self.prepare_image(image)
+        image = cond_inputs.pop('image')
         cond = self.encode_cond(
             image=image,
-            mask=mask,
+            additional_cond_inputs=cond_inputs,
             do_classifier_free_guidance=do_classifier_free_guidance,
             dual_guidance=False,
         )
@@ -560,34 +580,36 @@ class Hunyuan3DDiTFlowMatchingPipeline(Hunyuan3DDiTPipeline):
         if hasattr(self.model, 'guidance_embed') and \
             self.model.guidance_embed is True:
             guidance = torch.tensor([guidance_scale] * batch_size, device=device, dtype=dtype)
-            print(f'Using guidance embed with scale {guidance_scale}')
+            # logger.info(f'Using guidance embed with scale {guidance_scale}')
 
-        for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:")):
-            # expand the latents if we are doing classifier free guidance
-            if do_classifier_free_guidance:
-                latent_model_input = torch.cat([latents] * 2)
-            else:
-                latent_model_input = latents
+        with synchronize_timer('Diffusion Sampling'):
+            for i, t in enumerate(tqdm(timesteps, disable=not enable_pbar, desc="Diffusion Sampling:")):
+                # expand the latents if we are doing classifier free guidance
+                if do_classifier_free_guidance:
+                    latent_model_input = torch.cat([latents] * 2)
+                else:
+                    latent_model_input = latents
 
-            # NOTE: we assume model get timesteps ranged from 0 to 1
-            timestep = t.expand(latent_model_input.shape[0]).to(
-                latents.dtype) / self.scheduler.config.num_train_timesteps
-            noise_pred = self.model(latent_model_input, timestep, cond, guidance=guidance)
+                # NOTE: we assume model get timesteps ranged from 0 to 1
+                timestep = t.expand(latent_model_input.shape[0]).to(
+                    latents.dtype) / self.scheduler.config.num_train_timesteps
+                noise_pred = self.model(latent_model_input, timestep, cond, guidance=guidance)
 
-            if do_classifier_free_guidance:
-                noise_pred_cond, noise_pred_uncond = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
+                if do_classifier_free_guidance:
+                    noise_pred_cond, noise_pred_uncond = noise_pred.chunk(2)
+                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_cond - noise_pred_uncond)
 
-            # compute the previous noisy sample x_t -> x_t-1
-            outputs = self.scheduler.step(noise_pred, t, latents)
-            latents = outputs.prev_sample
+                # compute the previous noisy sample x_t -> x_t-1
+                outputs = self.scheduler.step(noise_pred, t, latents)
+                latents = outputs.prev_sample
 
-            if callback is not None and i % callback_steps == 0:
-                step_idx = i // getattr(self.scheduler, "order", 1)
-                callback(step_idx, t, outputs)
+                if callback is not None and i % callback_steps == 0:
+                    step_idx = i // getattr(self.scheduler, "order", 1)
+                    callback(step_idx, t, outputs)
 
         return self._export(
             latents,
             output_type,
             box_v, mc_level, num_chunks, octree_resolution, mc_algo,
+            enable_pbar=enable_pbar,
         )

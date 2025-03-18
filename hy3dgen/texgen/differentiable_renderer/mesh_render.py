@@ -24,6 +24,7 @@
 
 import cv2
 import numpy as np
+import time
 import torch
 import torch.nn.functional as F
 import trimesh
@@ -808,6 +809,24 @@ class MeshRender():
         return texture_merge, trust_map_merge > 1E-8
 
     def uv_inpaint(self, texture, mask):
+        EXPECTED_VERSION = "1.1"
+
+        try:
+            from .mesh_processor import get_module_version
+        except ImportError:
+            raise ImportError(
+                "mesh_processor module not found. Please compile the C++ code with 'pip install -e .'."
+            )
+
+        # Verify compiled version
+        compiled_version = get_module_version()
+        if compiled_version != EXPECTED_VERSION:
+            raise RuntimeError(
+                f"Compiled mesh_processor version ({compiled_version}) does not match expected version ({EXPECTED_VERSION}). "
+                "Please recompile the C++ code with 'pip install -e .'."
+            )
+
+        start_total = time.time()
 
         if isinstance(texture, torch.Tensor):
             texture_np = texture.cpu().numpy()
@@ -816,18 +835,18 @@ class MeshRender():
         elif isinstance(texture, Image.Image):
             texture_np = np.array(texture) / 255.0
 
+        if isinstance(mask, torch.Tensor):
+            mask_np = mask.cpu().numpy()
+        else:
+            mask_np = mask
+
         vtx_pos, pos_idx, vtx_uv, uv_idx = self.get_mesh()
+        texture_np, mask_np = meshVerticeInpaint(texture_np, mask_np, vtx_pos, vtx_uv, pos_idx, uv_idx)
 
-        texture_np, mask = meshVerticeInpaint(
-            texture_np, mask, vtx_pos, vtx_uv, pos_idx, uv_idx)
+        # Convert to uint8 (0-255) as before
+        texture_np = (texture_np * 255).astype(np.uint8)
 
-        texture_np = cv2.inpaint(
-            (texture_np *
-             255).astype(
-                np.uint8),
-            255 -
-            mask,
-            3,
-            cv2.INPAINT_NS)
+        end_total = time.time()
+        print(f"Total uv_inpaint time: {end_total - start_total:.4f}s")
 
         return texture_np

@@ -25,7 +25,7 @@
 
 <br>
 
-> 🔥🔥🔥 **New**: Release 🤗 [Hunyuan3D-2mv](https://huggingface.co/tencent/Hunyuan3D-2mv) and
+> 🔥🔥🔥 **New**: Release 🤗 [Hunyuan3D-2mv](https://huggingface.co/spaces/tencent/Hunyuan3D-2mv) and
 > 🤗[Hunyuan3D-2mini](https://huggingface.co/tencent/Hunyuan3D-2mini).
 
 > Join our **[Wechat](#)** and **[Discord](https://discord.gg/dNBrdrGGMa)** group to discuss and find help from us.

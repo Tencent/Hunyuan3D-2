@@ -29,7 +29,7 @@ import uuid
 
 from hy3dgen.shapegen.utils import logger
 
-MAX_SEED = 1e7
+MAX_SEED = 10000000
 
 
 def get_example_img_list():

@@ -1,3 +1,13 @@
+# Open Source Model Licensed under the Apache License Version 2.0
+# and Other Licenses of the Third-Party Components therein:
+# The below Model in this distribution may have been modified by THL A29 Limited
+# ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
+
+# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# The below software and/or models in this distribution may have been
+# modified by THL A29 Limited ("Tencent Modifications").
+# All Tencent Modifications are Copyright (C) THL A29 Limited.
+
 # Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
 # except for the third-party components listed below.
 # Hunyuan 3D does not impose any additional limitations beyond what is outlined
@@ -17,8 +27,9 @@ import random
 
 import numpy as np
 import torch
+from typing import List
 from diffusers import DiffusionPipeline
-from diffusers import EulerAncestralDiscreteScheduler
+from diffusers import EulerAncestralDiscreteScheduler, LCMScheduler
 
 
 class Multiview_Diffusion_Net():
@@ -34,8 +45,14 @@ class Multiview_Diffusion_Net():
             multiview_ckpt_path,
             custom_pipeline=custom_pipeline_path, torch_dtype=torch.float16)
 
-        pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(pipeline.scheduler.config,
-                                                                         timestep_spacing='trailing')
+        if config.pipe_name in ['hunyuanpaint']:
+            pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(pipeline.scheduler.config,
+                                                                             timestep_spacing='trailing')
+        elif config.pipe_name in ['hunyuanpaint-turbo']:
+            pipeline.scheduler = LCMScheduler.from_config(pipeline.scheduler.config,
+                                                        timestep_spacing='trailing')
+            pipeline.set_turbo(True)
+            # pipeline.prepare() 
 
         pipeline.set_progress_bar_config(disable=True)
         self.pipeline = pipeline.to(self.device)
@@ -46,11 +63,14 @@ class Multiview_Diffusion_Net():
         torch.manual_seed(seed)
         os.environ["PL_GLOBAL_SEED"] = str(seed)
 
-    def __call__(self, input_image, control_images, camera_info):
+    def __call__(self, input_images, control_images, camera_info):
 
         self.seed_everything(0)
 
-        input_image = input_image.resize((self.view_size, self.view_size))
+        if not isinstance(input_images, List):
+            input_images = [input_images]
+
+        input_images = [input_image.resize((self.view_size, self.view_size)) for input_image in input_images]
         for i in range(len(control_images)):
             control_images[i] = control_images[i].resize((self.view_size, self.view_size))
             if control_images[i].mode == 'L':
@@ -72,5 +92,6 @@ class Multiview_Diffusion_Net():
         kwargs["normal_imgs"] = normal_image
         kwargs["position_imgs"] = position_image
 
-        mvd_image = self.pipeline(input_image, num_inference_steps=30, **kwargs).images
+        mvd_image = self.pipeline(input_images, num_inference_steps=30, **kwargs).images
+
         return mvd_image

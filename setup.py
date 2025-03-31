@@ -1,3 +1,13 @@
+# Open Source Model Licensed under the Apache License Version 2.0
+# and Other Licenses of the Third-Party Components therein:
+# The below Model in this distribution may have been modified by THL A29 Limited
+# ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
+
+# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# The below software and/or models in this distribution may have been
+# modified by THL A29 Limited ("Tencent Modifications").
+# All Tencent Modifications are Copyright (C) THL A29 Limited.
+
 # Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
 # except for the third-party components listed below.
 # Hunyuan 3D does not impose any additional limitations beyond what is outlined
@@ -16,31 +26,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="hy3dgen",
-    version="2.0.2",
-    url="https://github.com/Tencent/Hunyuan3D-2",
+    version="2.0.0",
     packages=find_packages(),
-    include_package_data=True,
-    package_data={"hy3dgen": ["assets/*", "assets/**/*"]},
-    install_requires=[
-        'gradio',
-        "tqdm>=4.66.3",
-        'numpy',
-        'ninja',
-        'diffusers',
-        'pybind11',
-        'opencv-python',
-        'einops',
-        "transformers>=4.48.0",
-        'omegaconf',
-        'trimesh',
-        'pymeshlab',
-        'pygltflib',
-        'xatlas',
-        'accelerate',
-        'gradio',
-        'fastapi',
-        'uvicorn',
-        'rembg',
-        'onnxruntime'
-    ]
+
 )

@@ -1,3 +1,13 @@
+# Open Source Model Licensed under the Apache License Version 2.0
+# and Other Licenses of the Third-Party Components therein:
+# The below Model in this distribution may have been modified by THL A29 Limited
+# ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
+
+# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# The below software and/or models in this distribution may have been
+# modified by THL A29 Limited ("Tencent Modifications").
+# All Tencent Modifications are Copyright (C) THL A29 Limited.
+
 # Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
 # except for the third-party components listed below.
 # Hunyuan 3D does not impose any additional limitations beyond what is outlined
@@ -18,7 +28,8 @@ import numpy as np
 import os
 import torch
 from PIL import Image
-from typing import Union, Optional
+from typing import List, Union, Optional
+
 
 from .differentiable_renderer.mesh_render import MeshRender
 from .utils.dehighlight_utils import Light_Shadow_Remover
@@ -31,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 class Hunyuan3DTexGenConfig:
 
-    def __init__(self, light_remover_ckpt_path, multiview_ckpt_path):
+    def __init__(self, light_remover_ckpt_path, multiview_ckpt_path, subfolder_name):
         self.device = 'cuda'
         self.light_remover_ckpt_path = light_remover_ckpt_path
         self.multiview_ckpt_path = multiview_ckpt_path
@@ -45,10 +56,13 @@ class Hunyuan3DTexGenConfig:
         self.bake_exp = 4
         self.merge_method = 'fast'
 
+        self.pipe_dict = {'hunyuan3d-paint-v2-0': 'hunyuanpaint', 'hunyuan3d-paint-v2-0-turbo': 'hunyuanpaint-turbo'}
+        self.pipe_name = self.pipe_dict[subfolder_name]
+
 
 class Hunyuan3DPaintPipeline:
     @classmethod
-    def from_pretrained(cls, model_path):
+    def from_pretrained(cls, model_path, subfolder='hunyuan3d-paint-v2-0-turbo'):
         original_model_path = model_path
         if not os.path.exists(model_path):
             # try local path
@@ -56,34 +70,30 @@ class Hunyuan3DPaintPipeline:
             model_path = os.path.expanduser(os.path.join(base_dir, model_path))
 
             delight_model_path = os.path.join(model_path, 'hunyuan3d-delight-v2-0')
-            multiview_model_path = os.path.join(model_path, 'hunyuan3d-paint-v2-0')
+            multiview_model_path = os.path.join(model_path, subfolder)
 
             if not os.path.exists(delight_model_path) or not os.path.exists(multiview_model_path):
                 try:
                     import huggingface_hub
                     # download from huggingface
-                    model_path = huggingface_hub.snapshot_download(repo_id=original_model_path,
-                                                                   allow_patterns=["hunyuan3d-delight-v2-0/*"])
-                    model_path = huggingface_hub.snapshot_download(repo_id=original_model_path,
-                                                                   allow_patterns=["hunyuan3d-paint-v2-0/*"])
+                    model_path = huggingface_hub.snapshot_download(
+                        repo_id=original_model_path, allow_patterns=["hunyuan3d-delight-v2-0/*"]
+                    )
+                    model_path = huggingface_hub.snapshot_download(
+                        repo_id=original_model_path, allow_patterns=[f'{subfolder}/*']
+                    )
                     delight_model_path = os.path.join(model_path, 'hunyuan3d-delight-v2-0')
-                    multiview_model_path = os.path.join(model_path, 'hunyuan3d-paint-v2-0')
-                    return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path))
+                    multiview_model_path = os.path.join(model_path, subfolder)
+                    return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path, subfolder))
                 except ImportError:
                     logger.warning(
                         "You need to install HuggingFace Hub to load models from the hub."
                     )
                     raise RuntimeError(f"Model path {model_path} not found")
             else:
-                return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path))
-        else:
-            delight_model_path = os.path.join(model_path, 'hunyuan3d-delight-v2-0')
-            multiview_model_path = os.path.join(model_path, 'hunyuan3d-paint-v2-0')
-            if not os.path.exists(delight_model_path):
-                raise RuntimeError(f"Model path {delight_model_path} not found")
-            if not os.path.exists(multiview_model_path):
-                raise RuntimeError(f"Model path {multiview_model_path} not found")
-            return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path))
+                return cls(Hunyuan3DTexGenConfig(delight_model_path, multiview_model_path, subfolder))
+
+        raise FileNotFoundError(f"Model path {original_model_path} not found and we could not find it at huggingface")
 
     def __init__(self, config):
         self.config = config
@@ -188,14 +198,20 @@ class Hunyuan3DPaintPipeline:
     @torch.no_grad()
     def __call__(self, mesh, image):
 
-        if isinstance(image, str):
-            image_prompt = Image.open(image)
-        else:
-            image_prompt = image
+        if not isinstance(image, List):
+            image = [image]
 
-        image_prompt = self.recenter_image(image_prompt)
+        images_prompt = []
+        for i in range(len(image)):
+            if isinstance(image[i], str):
+                image_prompt = Image.open(image[i])
+            else:
+                image_prompt = image[i]
+            images_prompt.append(image_prompt)
+            
+        images_prompt = [self.recenter_image(image_prompt) for image_prompt in images_prompt]
 
-        image_prompt = self.models['delight_model'](image_prompt)
+        images_prompt = [self.models['delight_model'](image_prompt) for image_prompt in images_prompt]
 
         mesh = mesh_uv_wrap(mesh)
 
@@ -212,10 +228,10 @@ class Hunyuan3DPaintPipeline:
         camera_info = [(((azim // 30) + 9) % 12) // {-20: 1, 0: 1, 20: 1, -90: 3, 90: 3}[
             elev] + {-20: 0, 0: 12, 20: 24, -90: 36, 90: 40}[elev] for azim, elev in
                        zip(selected_camera_azims, selected_camera_elevs)]
-        multiviews = self.models['multiview_model'](image_prompt, normal_maps + position_maps, camera_info)
+        multiviews = self.models['multiview_model'](images_prompt, normal_maps + position_maps, camera_info)
 
         for i in range(len(multiviews)):
-            #     multiviews[i] = self.models['super_model'](multiviews[i])
+            # multiviews[i] = self.models['super_model'](multiviews[i])
             multiviews[i] = multiviews[i].resize(
                 (self.config.render_size, self.config.render_size))
 

@@ -17,7 +17,7 @@ pipeline = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained(
     use_safetensors=False,
     device=device
 )
-pipeline.enable_flashvdm(topk_mode='merge')
+pipeline.enable_flashvdm()
 # pipeline.compile()
 
 image_path = 'assets/demo.png'

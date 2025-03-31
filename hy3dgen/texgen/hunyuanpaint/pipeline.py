@@ -1,3 +1,13 @@
+# Open Source Model Licensed under the Apache License Version 2.0
+# and Other Licenses of the Third-Party Components therein:
+# The below Model in this distribution may have been modified by THL A29 Limited
+# ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
+
+# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# The below software and/or models in this distribution may have been
+# modified by THL A29 Limited ("Tencent Modifications").
+# All Tencent Modifications are Copyright (C) THL A29 Limited.
+
 # Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
 # except for the third-party components listed below.
 # Hunyuan 3D does not impose any additional limitations beyond what is outlined
@@ -19,26 +29,164 @@ import numpy as np
 import torch
 import torch.distributed
 import torch.utils.checkpoint
+import transformers
 from PIL import Image
+import diffusers
 from diffusers import (
     AutoencoderKL,
+    DDPMScheduler,
     DiffusionPipeline,
+    EulerAncestralDiscreteScheduler,
+    UNet2DConditionModel,
     ImagePipelineOutput
 )
 from diffusers.callbacks import MultiPipelineCallbacks, PipelineCallback
 from diffusers.image_processor import PipelineImageInput
 from diffusers.image_processor import VaeImageProcessor
 from diffusers.pipelines.stable_diffusion.pipeline_output import StableDiffusionPipelineOutput
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline, retrieve_timesteps, \
-    rescale_noise_cfg
-from diffusers.schedulers import KarrasDiffusionSchedulers
+from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline, \
+    retrieve_timesteps, rescale_noise_cfg
+from diffusers.schedulers import KarrasDiffusionSchedulers, LCMScheduler
 from diffusers.utils import deprecate
 from einops import rearrange
-from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer
+from transformers import CLIPImageProcessor, CLIPTextModel, CLIPTokenizer, CLIPVisionModelWithProjection
 
-from .unet.modules import UNet2p5DConditionModel
+from .unet.modules import UNet2p5DConditionModel, \
+    compute_multi_resolution_mask, compute_multi_resolution_discrete_voxel_indice
+
+def guidance_scale_embedding(w, embedding_dim=512, dtype=torch.float32):
+    """
+    See https://github.com/google-research/vdm/blob/dc27b98a554f65cdc654b800da5aa1846545d41b/model_vdm.py#L298
+
+    Args:
+        timesteps (`torch.Tensor`):
+            generate embedding vectors at these timesteps
+        embedding_dim (`int`, *optional*, defaults to 512):
+            dimension of the embeddings to generate
+        dtype:
+            data type of the generated embeddings
+
+    Returns:
+        `torch.FloatTensor`: Embedding vectors with shape `(len(timesteps), embedding_dim)`
+    """
+    assert len(w.shape) == 1
+    w = w * 1000.0
+
+    half_dim = embedding_dim // 2
+    emb = torch.log(torch.tensor(10000.0)) / (half_dim - 1)
+    emb = torch.exp(torch.arange(half_dim, dtype=dtype) * -emb)
+    emb = w.to(dtype)[:, None] * emb[None, :]
+    emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
+    if embedding_dim % 2 == 1:  # zero pad
+        emb = torch.nn.functional.pad(emb, (0, 1))
+    assert emb.shape == (w.shape[0], embedding_dim)
+    return emb
 
 
+def append_dims(x, target_dims):
+    """Appends dimensions to the end of a tensor until it has target_dims dimensions."""
+    dims_to_append = target_dims - x.ndim
+    if dims_to_append < 0:
+        raise ValueError(f"input has {x.ndim} dims but target_dims is {target_dims}, which is less")
+    return x[(...,) + (None,) * dims_to_append]
+
+
+# From LCMScheduler.get_scalings_for_boundary_condition_discrete
+def scalings_for_boundary_conditions(timestep, sigma_data=0.5, timestep_scaling=10.0):
+    scaled_timestep = timestep_scaling * timestep
+    c_skip = sigma_data ** 2 / (scaled_timestep ** 2 + sigma_data ** 2)
+    c_out = scaled_timestep / (scaled_timestep ** 2 + sigma_data ** 2) ** 0.5
+    return c_skip, c_out
+
+
+# Compare LCMScheduler.step, Step 4
+def get_predicted_original_sample(model_output, timesteps, sample, prediction_type, alphas, sigmas, N_gen):
+    alphas = extract_into_tensor(alphas, timesteps, sample.shape, N_gen)
+    sigmas = extract_into_tensor(sigmas, timesteps, sample.shape, N_gen)
+    model_output = rearrange(model_output, '(b n) c h w -> b n c h w', n=N_gen)
+    if prediction_type == "epsilon":
+        pred_x_0 = (sample - sigmas * model_output) / alphas
+    elif prediction_type == "sample":
+        pred_x_0 = model_output
+    elif prediction_type == "v_prediction":
+        pred_x_0 = alphas * sample - sigmas * model_output
+    else:
+        raise ValueError(
+            f"Prediction type {prediction_type} is not supported; currently, `epsilon`, `sample`, and `v_prediction`"
+            f" are supported."
+        )
+
+    return pred_x_0
+
+
+# Based on step 4 in DDIMScheduler.step
+def get_predicted_noise(model_output, timesteps, sample, prediction_type, alphas, sigmas, N_gen):
+    alphas = extract_into_tensor(alphas, timesteps, sample.shape, N_gen)
+    sigmas = extract_into_tensor(sigmas, timesteps, sample.shape, N_gen)
+    model_output = rearrange(model_output, '(b n) c h w -> b n c h w', n=N_gen)
+    if prediction_type == "epsilon":
+        pred_epsilon = model_output
+    elif prediction_type == "sample":
+        pred_epsilon = (sample - alphas * model_output) / sigmas
+    elif prediction_type == "v_prediction":
+        pred_epsilon = alphas * model_output + sigmas * sample
+    else:
+        raise ValueError(
+            f"Prediction type {prediction_type} is not supported; currently, `epsilon`, `sample`, and `v_prediction`"
+            f" are supported."
+        )
+
+    return pred_epsilon
+    
+def extract_into_tensor(a, t, x_shape, N_gen):
+    # b, *_ = t.shape
+    out = a.gather(-1, t)
+    out = out.repeat(N_gen)
+    out = rearrange(out, '(b n) -> b n', n=N_gen)
+    b, c, *_ = out.shape
+    return out.reshape(b, c, *((1,) * (len(x_shape) - 2)))
+
+class DDIMSolver:
+    def __init__(self, alpha_cumprods, timesteps=1000, ddim_timesteps=50):
+        # DDIM sampling parameters
+        step_ratio = timesteps // ddim_timesteps
+        self.ddim_timesteps = (np.arange(1, ddim_timesteps + 1) * step_ratio).round().astype(np.int64) - 1
+        self.ddim_alpha_cumprods = alpha_cumprods[self.ddim_timesteps]
+        self.ddim_alpha_cumprods_prev = np.asarray(
+            [alpha_cumprods[0]] + alpha_cumprods[self.ddim_timesteps[:-1]].tolist()
+        )
+        # convert to torch tensors
+        self.ddim_timesteps = torch.from_numpy(self.ddim_timesteps).long()
+        self.ddim_alpha_cumprods = torch.from_numpy(self.ddim_alpha_cumprods)
+        self.ddim_alpha_cumprods_prev = torch.from_numpy(self.ddim_alpha_cumprods_prev)
+
+    def to(self, device):
+        self.ddim_timesteps = self.ddim_timesteps.to(device)
+        self.ddim_alpha_cumprods = self.ddim_alpha_cumprods.to(device)
+        self.ddim_alpha_cumprods_prev = self.ddim_alpha_cumprods_prev.to(device)
+        return self
+
+    def ddim_step(self, pred_x0, pred_noise, timestep_index, N_gen):
+        alpha_cumprod_prev = extract_into_tensor(self.ddim_alpha_cumprods_prev, timestep_index, pred_x0.shape, N_gen)
+        dir_xt = (1.0 - alpha_cumprod_prev).sqrt() * pred_noise
+        x_prev = alpha_cumprod_prev.sqrt() * pred_x0 + dir_xt
+        return x_prev
+
+
+@torch.no_grad()
+def update_ema(target_params, source_params, rate=0.99):
+    """
+    Update target parameters to be closer to those of source parameters using
+    an exponential moving average.
+
+    :param target_params: the target parameter sequence.
+    :param source_params: the source parameter sequence.
+    :param rate: the EMA rate (closer to 1 means slower).
+    """
+
+    for targ, src in zip(target_params, source_params):
+        targ.detach().mul_(rate).add_(src, alpha=1 - rate)
+        
 def to_rgb_image(maybe_rgba: Image.Image):
     if maybe_rgba.mode == 'RGB':
         return maybe_rgba
@@ -77,9 +225,18 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             safety_checker=safety_checker,
             feature_extractor=torch.compile(feature_extractor) if use_torch_compile else feature_extractor,
         )
+        self.solver = DDIMSolver(
+            scheduler.alphas_cumprod.numpy(),
+            timesteps=scheduler.config.num_train_timesteps,
+            ddim_timesteps=30,
+        ).to('cuda')
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
         self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
+        self.is_turbo = False
 
+    def set_turbo(self, is_turbo: bool):
+        self.is_turbo = is_turbo
+        
     @torch.no_grad()
     def encode_images(self, images):
         B = images.shape[0]
@@ -115,13 +272,17 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             raise ValueError("Inputting embeddings not supported for this pipeline. Please pass an image.")
         assert not isinstance(image, torch.Tensor)
 
-        image = to_rgb_image(image)
+        if not isinstance(image, List):
+            image = [image]
+            
+        image = [to_rgb_image(img) for img in image]
 
-        image_vae = torch.tensor(np.array(image) / 255.0)
-        image_vae = image_vae.unsqueeze(0).permute(0, 3, 1, 2).unsqueeze(0)
+        image_vae = [torch.tensor(np.array(img) / 255.0) for img in image]
+        image_vae = [img_vae.unsqueeze(0).permute(0, 3, 1, 2).unsqueeze(0) for img_vae in image_vae]
+        image_vae = torch.cat(image_vae, dim=1)
         image_vae = image_vae.to(device=device, dtype=self.vae.dtype)
 
-        batch_size = image_vae.shape[0]
+        batch_size, N_ref = image_vae.shape[0], image_vae.shape[1]
         assert batch_size == 1
         assert num_images_per_prompt == 1
 
@@ -157,6 +318,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             if isinstance(cached_condition["position_imgs"], List):
                 cached_condition["position_imgs"] = convert_pil_list_to_tensor(cached_condition["position_imgs"])
 
+            cached_condition['position_maps'] = cached_condition['position_imgs']            
             cached_condition["position_imgs"] = self.encode_images(cached_condition["position_imgs"])
 
         if 'camera_info_gen' in cached_condition:
@@ -174,7 +336,16 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
 
         cached_condition['ref_latents'] = ref_latents
 
-        if guidance_scale > 1:
+        if self.is_turbo:
+            if 'position_maps' in cached_condition:
+                cached_condition['position_attn_mask'] = (
+                    compute_multi_resolution_mask(cached_condition['position_maps'])
+                )
+                cached_condition['position_voxel_indices'] = (
+                    compute_multi_resolution_discrete_voxel_indice(cached_condition['position_maps'])
+                )
+            
+        if (guidance_scale > 1) and (not self.is_turbo):
             negative_ref_latents = torch.zeros_like(cached_condition['ref_latents'])
             cached_condition['ref_latents'] = torch.cat([negative_ref_latents, cached_condition['ref_latents']])
             cached_condition['ref_scale'] = torch.as_tensor([0.0, 1.0]).to(cached_condition['ref_latents'])
@@ -313,7 +484,8 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                 plain tuple.
             cross_attention_kwargs (`dict`, *optional*):
                 A kwargs dictionary that if specified is passed along to the [`AttentionProcessor`] as defined in
-                [`self.processor`](https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py).
+                [`self.processor`]
+                (https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py).
             guidance_rescale (`float`, *optional*, defaults to 0.0):
                 Guidance rescale factor from [Common Diffusion Noise Schedules and Sample Steps are
                 Flawed](https://arxiv.org/pdf/2305.08891.pdf). Guidance rescale factor should fix overexposure when
@@ -348,13 +520,15 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             deprecate(
                 "callback",
                 "1.0.0",
-                "Passing `callback` as an input argument to `__call__` is deprecated, consider using `callback_on_step_end`",
+                "Passing `callback` as an input argument to `__call__` is deprecated,",
+                "consider using `callback_on_step_end`",
             )
         if callback_steps is not None:
             deprecate(
                 "callback_steps",
                 "1.0.0",
-                "Passing `callback_steps` as an input argument to `__call__` is deprecated, consider using `callback_on_step_end`",
+                "Passing `callback_steps` as an input argument to `__call__` is deprecated,",
+                "consider using `callback_on_step_end`",
             )
 
         if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
@@ -404,7 +578,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
             prompt,
             device,
             num_images_per_prompt,
-            self.do_classifier_free_guidance,
+            self.do_classifier_free_guidance if self.is_turbo else False,
             negative_prompt,
             prompt_embeds=prompt_embeds,
             negative_prompt_embeds=negative_prompt_embeds,
@@ -415,7 +589,7 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
         # For classifier free guidance, we need to do two forward passes.
         # Here we concatenate the unconditional and text embeddings into a single batch
         # to avoid doing two forward passes
-        if self.do_classifier_free_guidance:
+        if (self.do_classifier_free_guidance) and (not self.is_turbo):
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
 
         if ip_adapter_image is not None or ip_adapter_image_embeds is not None:
@@ -424,13 +598,21 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                 ip_adapter_image_embeds,
                 device,
                 batch_size * num_images_per_prompt,
-                self.do_classifier_free_guidance,
+                self.do_classifier_free_guidance if self.is_turbo else False,
             )
 
-        # 4. Prepare timesteps
-        timesteps, num_inference_steps = retrieve_timesteps(
-            self.scheduler, num_inference_steps, device, timesteps, sigmas
-        )
+        # 4. Prepare 
+        if self.is_turbo:
+            bsz = 3
+            N_gen = 15
+            index = torch.range(29, 0, -bsz, device='cuda').long()
+            timesteps = self.solver.ddim_timesteps[index]
+            self.scheduler.set_timesteps(timesteps=timesteps.cpu(), device='cuda')
+        else:
+            timesteps, num_inference_steps = retrieve_timesteps(
+                self.scheduler, num_inference_steps, device, timesteps, sigmas
+            )
+            
         assert num_images_per_prompt == 1
         # 5. Prepare latent variables
         num_channels_latents = self.unet.config.in_channels
@@ -473,7 +655,11 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
 
                 # expand the latents if we are doing classifier free guidance
                 latents = rearrange(latents, '(b n) c h w -> b n c h w', n=kwargs['num_in_batch'])
-                latent_model_input = torch.cat([latents] * 2) if self.do_classifier_free_guidance else latents
+                latent_model_input = (
+                    torch.cat([latents] * 2) 
+                    if ((self.do_classifier_free_guidance) and (not self.is_turbo)) 
+                    else latents
+                )
                 latent_model_input = rearrange(latent_model_input, 'b n c h w -> (b n) c h w')
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
                 latent_model_input = rearrange(latent_model_input, '(b n) c h w ->b n c h w', n=kwargs['num_in_batch'])
@@ -491,11 +677,11 @@ class HunyuanPaintPipeline(StableDiffusionPipeline):
                 )[0]
                 latents = rearrange(latents, 'b n c h w -> (b n) c h w')
                 # perform guidance
-                if self.do_classifier_free_guidance:
+                if (self.do_classifier_free_guidance) and (not self.is_turbo):
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
                     noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
 
-                if self.do_classifier_free_guidance and self.guidance_rescale > 0.0:
+                if (self.do_classifier_free_guidance) and (self.guidance_rescale > 0.0) and (not self.is_turbo):
                     # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
                     noise_pred = rescale_noise_cfg(noise_pred, noise_pred_text, guidance_rescale=self.guidance_rescale)
 

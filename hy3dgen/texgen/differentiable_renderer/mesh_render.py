@@ -1,3 +1,13 @@
+# Open Source Model Licensed under the Apache License Version 2.0
+# and Other Licenses of the Third-Party Components therein:
+# The below Model in this distribution may have been modified by THL A29 Limited
+# ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
+
+# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# The below software and/or models in this distribution may have been
+# modified by THL A29 Limited ("Tencent Modifications").
+# All Tencent Modifications are Copyright (C) THL A29 Limited.
+
 # Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
 # except for the third-party components listed below.
 # Hunyuan 3D does not impose any additional limitations beyond what is outlined
@@ -474,7 +484,7 @@ class MeshRender():
         visible_mask = torch.clamp(rast_out[..., -1:], 0, 1)
         normal = normal * visible_mask + \
                  torch.tensor(bg_color, dtype=torch.float32, device=self.device) * (1 -
-                                                                                    visible_mask)  # Mask out background.
+                                                                                    visible_mask)  
 
         if normalize_rgb:
             normal = (normal + 1) * 0.5
@@ -584,7 +594,7 @@ class MeshRender():
 
         position = position * visible_mask + \
                    torch.tensor(bg_color, dtype=torch.float32, device=self.device) * (1 -
-                                                                                      visible_mask)  # Mask out background.
+                                                                                      visible_mask) 
         if self.use_antialias:
             position = self.raster_antialias(position, rast_out, pos_clip, self.pos_idx)
 

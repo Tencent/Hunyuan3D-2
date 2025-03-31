@@ -1,3 +1,13 @@
+# Open Source Model Licensed under the Apache License Version 2.0
+# and Other Licenses of the Third-Party Components therein:
+# The below Model in this distribution may have been modified by THL A29 Limited
+# ("Tencent Modifications"). All Tencent Modifications are Copyright (C) 2024 THL A29 Limited.
+
+# Copyright (C) 2024 THL A29 Limited, a Tencent company.  All rights reserved.
+# The below software and/or models in this distribution may have been
+# modified by THL A29 Limited ("Tencent Modifications").
+# All Tencent Modifications are Copyright (C) THL A29 Limited.
+
 # Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
 # except for the third-party components listed below.
 # Hunyuan 3D does not impose any additional limitations beyond what is outlined
@@ -51,7 +61,10 @@ class Light_Shadow_Remover():
         for i in range(3): 
             src_mean, src_stddev = torch.mean(src_flat[:, i]), torch.std(src_flat[:, i])
             target_mean, target_stddev = torch.mean(target_flat[:, i]), torch.std(target_flat[:, i])
-            corrected_bgr[:, :, i] = torch.clamp((src_image[:, :, i] - scale * src_mean) * (target_stddev / src_stddev) + scale * target_mean, 0, 1)
+            corrected_bgr[:, :, i] = torch.clamp(
+                (src_image[:, :, i] - scale * src_mean) * 
+                (target_stddev / src_stddev) + scale * target_mean, 
+                0, 1)
 
         src_mse = torch.mean((src_image - target_image) ** 2)
         modify_mse = torch.mean((corrected_bgr - target_image) ** 2)

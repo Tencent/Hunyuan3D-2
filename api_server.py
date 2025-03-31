@@ -1,17 +1,3 @@
-# Hunyuan 3D is licensed under the TENCENT HUNYUAN NON-COMMERCIAL LICENSE AGREEMENT
-# except for the third-party components listed below.
-# Hunyuan 3D does not impose any additional limitations beyond what is outlined
-# in the repsective licenses of these third-party components.
-# Users must comply with all terms and conditions of original licenses of these third-party
-# components and must ensure that the usage of the third party components adheres to
-# all relevant laws and regulations.
-
-# For avoidance of doubts, Hunyuan 3D means the large language models and
-# their software and algorithms, including trained model weights, parameters (including
-# optimizer states), machine-learning model code, inference-enabling code, training-enabling code,
-# fine-tuning enabling code and other elements of the foregoing made publicly available
-# by Tencent in accordance with TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT.
-
 """
 A model worker executes the model.
 """
@@ -36,8 +22,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, FileResponse
 
 from hy3dgen.rembg import BackgroundRemover
-from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline, FloaterRemover, DegenerateFaceRemover, FaceReducer, \
-    MeshSimplifier
+from hy3dgen.shapegen import Hunyuan3DDiTFlowMatchingPipeline, FloaterRemover, DegenerateFaceRemover, FaceReducer
 from hy3dgen.texgen import Hunyuan3DPaintPipeline
 from hy3dgen.text2image import HunyuanDiTPipeline
 
@@ -144,12 +129,7 @@ def load_image_from_base64(image):
 
 
 class ModelWorker:
-    def __init__(self,
-                 model_path='tencent/Hunyuan3D-2mini',
-                 tex_model_path='tencent/Hunyuan3D-2',
-                 subfolder='hunyuan3d-dit-v2-mini-turbo',
-                 device='cuda',
-                 enable_tex=False):
+    def __init__(self, model_path='tencent/Hunyuan3D-2mini', subfolder='hunyuan3d-dit-v2-mini-turbo', device='cuda'):
         self.model_path = model_path
         self.worker_id = worker_id
         self.device = device
@@ -160,15 +140,13 @@ class ModelWorker:
             model_path,
             subfolder=subfolder,
             use_safetensors=True,
-            device=device,
         )
-        self.pipeline.enable_flashvdm(mc_algo='mc')
-        # self.pipeline_t2i = HunyuanDiTPipeline(
-        #     'Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled',
-        #     device=device
-        # )
-        if enable_tex:
-            self.pipeline_tex = Hunyuan3DPaintPipeline.from_pretrained(tex_model_path)
+        self.pipeline.enable_flashvdm()
+        self.pipeline_t2i = HunyuanDiTPipeline(
+            'Tencent-Hunyuan/HunyuanDiT-v1.1-Diffusers-Distilled',
+            device=device
+        )
+        self.pipeline_tex = Hunyuan3DPaintPipeline.from_pretrained(model_path)
 
     def get_queue_length(self):
         if model_semaphore is None:
@@ -206,7 +184,7 @@ class ModelWorker:
             params['octree_resolution'] = params.get("octree_resolution", 128)
             params['num_inference_steps'] = params.get("num_inference_steps", 5)
             params['guidance_scale'] = params.get('guidance_scale', 5.0)
-            params['mc_algo'] = 'mc'
+            params['mc_algo'] = 'dmc'
             import time
             start_time = time.time()
             mesh = self.pipeline(**params)[0]
@@ -219,7 +197,7 @@ class ModelWorker:
             mesh = self.pipeline_tex(mesh, image)
 
         type = params.get('type', 'glb')
-        with tempfile.NamedTemporaryFile(suffix=f'.{type}', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=f'.{type}', delete=True) as temp_file:
             mesh.export(temp_file.name)
             mesh = trimesh.load(temp_file.name)
             save_path = os.path.join(SAVE_DIR, f'{str(uid)}.{type}')
@@ -300,17 +278,14 @@ async def status(uid: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8081)
+    parser.add_argument("--port", type=str, default="8081")
     parser.add_argument("--model_path", type=str, default='tencent/Hunyuan3D-2mini')
-    parser.add_argument("--tex_model_path", type=str, default='tencent/Hunyuan3D-2')
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--limit-model-concurrency", type=int, default=5)
-    parser.add_argument('--enable_tex', action='store_true')
     args = parser.parse_args()
     logger.info(f"args: {args}")
 
     model_semaphore = asyncio.Semaphore(args.limit_model_concurrency)
 
-    worker = ModelWorker(model_path=args.model_path, device=args.device, enable_tex=args.enable_tex,
-                         tex_model_path=args.tex_model_path)
+    worker = ModelWorker(model_path=args.model_path, device=args.device)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
